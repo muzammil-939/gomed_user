@@ -1,17 +1,74 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
+import 'package:gomed_user/providers/auth_state.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class ProfilePage extends StatefulWidget {
+class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({super.key});
 
   @override
   _ProfilePageState createState() => _ProfilePageState();
 }
 
-class _ProfilePageState extends State<ProfilePage> {
+class _ProfilePageState extends ConsumerState<ProfilePage> {
   bool isEditing = false;
-  final TextEditingController nameController = TextEditingController(text: "John Doe");
-  final TextEditingController emailController = TextEditingController(text: "johndoe@example.com");
-  final TextEditingController phoneController = TextEditingController(text: "1234567890");
+  final TextEditingController nameController = TextEditingController();
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController phoneController = TextEditingController();
+
+  File? _selectedImage;
+  final double maxImageSize = 5 * 1024 * 1024; // 5 MB in bytes
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  void _loadUserData() {
+    final userModel = ref.read(userProvider);
+    if (userModel.data != null && userModel.data!.isNotEmpty) {
+      final user = userModel.data![0].user;
+      nameController.text = user?.ownerName ?? "";
+      emailController.text = user?.email ?? "";
+      phoneController.text = user?.mobile ?? "";
+    }
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: source);
+
+    if (image != null) {
+      final File imageFile = File(image.path);
+      final int imageSize = await imageFile.length();
+
+      if (imageSize <= maxImageSize) {
+        setState(() {
+          _selectedImage = imageFile;
+        });
+      } else {
+        _showSizeError();
+      }
+    }
+  }
+
+  void _showSizeError() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Image Too Large"),
+        content: const Text("The selected image exceeds the size limit of 5 MB. Please choose a smaller image."),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text("OK"),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,8 +76,12 @@ class _ProfilePageState extends State<ProfilePage> {
     double screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
+       appBar: AppBar(
+        title: const Text('Profile'),
+        backgroundColor: const Color(0xFF1BA4CA), // Custom background color
+      ),
       backgroundColor: Colors.grey[100],
-      body: Padding(
+      body: SingleChildScrollView(
         padding: EdgeInsets.all(screenWidth * 0.05),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -28,13 +89,25 @@ class _ProfilePageState extends State<ProfilePage> {
             Center(
               child: Column(
                 children: [
-                  const CircleAvatar(
-                    radius: 50,
-                    backgroundImage: AssetImage('assets/user_profile.png'), // Replace with actual profile image
+                  GestureDetector(
+                    onTap: () => _showImageSourceActionSheet(context),
+                    child: CircleAvatar(
+                      radius: 50,
+                      backgroundImage: _selectedImage != null
+                          ? FileImage(_selectedImage!) as ImageProvider
+                          : null,
+                      child: _selectedImage == null
+                          ? const Icon(
+                              Icons.person,
+                              size: 50,
+                              color: Colors.grey,
+                            )
+                          : null,
+                    ),
                   ),
                   SizedBox(height: screenHeight * 0.02),
                   Text(
-                    "John Doe",  // Replace with actual user name
+                    nameController.text.isNotEmpty ? nameController.text : "User Name",
                     style: TextStyle(fontSize: screenWidth * 0.06, fontWeight: FontWeight.bold),
                   ),
                 ],
@@ -49,25 +122,46 @@ class _ProfilePageState extends State<ProfilePage> {
             SizedBox(height: screenHeight * 0.04),
             Center(
               child: ElevatedButton(
-                onPressed: () {
-                  setState(() {
-                    if (isEditing) {
-                      // Save action (could be saving to database or updating state)
-                      print("Saved changes: ${nameController.text}, ${emailController.text}, ${phoneController.text}");
+                onPressed: () async {
+                  if (isEditing) {
+                    try {
+                      await ref.read(userProvider.notifier).updateProfile(
+                        nameController.text,
+                        emailController.text,
+                        phoneController.text,
+                        _selectedImage,
+                        ref,
+                      );
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Profile updated successfully!")),
+                      );
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text("Error updating profile: $e")),
+                      );
                     }
+                  }
+                  setState(() {
                     isEditing = !isEditing;
                   });
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: isEditing ? Colors.green : Colors.blue,
-                  padding: EdgeInsets.symmetric(vertical: screenHeight * 0.015, horizontal: screenWidth * 0.3),
+                  padding: EdgeInsets.symmetric(
+                    vertical: MediaQuery.of(context).size.height * 0.015,
+                    horizontal: MediaQuery.of(context).size.width * 0.3,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
                 child: Text(
                   isEditing ? 'Save' : 'Edit Profile',
-                  style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
@@ -96,6 +190,36 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
         ),
       ],
+    );
+  }
+
+  void _showImageSourceActionSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text("Take a photo"),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _pickImage(ImageSource.camera);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text("Choose from gallery"),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _pickImage(ImageSource.gallery);
+                },
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

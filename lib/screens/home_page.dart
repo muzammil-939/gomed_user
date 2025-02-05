@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:gomed_user/screens/products_screen.dart';
 import 'package:gomed_user/screens/profile_screen.dart';
 import 'package:gomed_user/screens/settings_screen.dart';
-import 'package:gomed_user/screens/sevices.dart';
+import 'package:gomed_user/screens/services.dart';
 
 import 'booking_screen.dart';
 import 'home_page_content.dart';
@@ -20,9 +21,11 @@ class _HomePageState extends State<HomePage> {
   static const List<Widget> _pages = <Widget>[
     HomePageContent(),
     ProfilePage(),
+    ProductsScreen(),
     BookingsPage(),
     ServicesPage(),
     SettingsPage(),
+
   ];
 
   // Function to handle page switching
@@ -75,11 +78,13 @@ class _HomePageState extends State<HomePage> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+          BottomNavigationBarItem(icon: Icon(Icons.inventory),  label: 'Products'),
           BottomNavigationBarItem(icon: Icon(Icons.book), label: 'Bookings'),
           BottomNavigationBarItem(
               icon: Icon(Icons.miscellaneous_services), label: 'Services'),
           BottomNavigationBarItem(
               icon: Icon(Icons.settings), label: 'Settings'),
+
         ],
       ),
     );

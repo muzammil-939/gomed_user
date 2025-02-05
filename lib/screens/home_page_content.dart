@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:gomed_user/screens/sevices.dart';
+import 'package:gomed_user/screens/services.dart';
 
 class HomePageContent extends StatefulWidget {
   const HomePageContent({super.key});
