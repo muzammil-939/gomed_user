@@ -116,7 +116,8 @@ Data.fromJson(Map<String, dynamic> json) {
   productDescription = json['productDescription'];
   price = json['price'] is int ? (json['price'] as int).toDouble() : json['price'];
   category = json['category'];
-  spareParts = json['spareParts'];
+   // Convert "true"/"false" (String) to actual boolean
+  spareParts = json['spareParts'] == "true" ? true : false;
   productImage = json['productImage'];
 }
 

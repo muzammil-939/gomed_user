@@ -1,3 +1,4 @@
 {
-    "cmake.sourceDirectory": "C:/gomed_user/linux"
+    "cmake.sourceDirectory": "C:/gomed_user/linux",
+    "java.configuration.updateBuildConfiguration": "disabled"
 }

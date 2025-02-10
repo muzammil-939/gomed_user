@@ -83,12 +83,12 @@ class MyApp extends StatelessWidget {
          );
       },
       
-      "booking_screen":(context)=>const BookingsPage(),
+        "booking_screen":(context)=>const BookingsPage(),
         "bookingstagepage":(context)=>const BookingStagePage(),
         "home_page_content":(context)=>const HomePageContent(),
-        //"home_page":(context)=>const HomePage(),
-        //"login_screen":(context)=>const LoginScreen(),
-        "products_screen":(context)=>const ProductsScreen(),
+        "home_page":(context)=>const HomePage(),
+         "login_screen":(context)=>const LoginScreen(),
+        // "products_screen":(context)=>const ProductsScreen(),
         "profile_screen":(context)=>const ProfilePage(),
         "settings_screen":(context)=>const SettingsPage(),
         "services":(context)=>const ServicesPage(),

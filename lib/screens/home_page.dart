@@ -21,7 +21,7 @@ class _HomePageState extends State<HomePage> {
   static const List<Widget> _pages = <Widget>[
     HomePageContent(),
     ProfilePage(),
-    ProductsScreen(),
+    ProductsScreen(selectedCategory: "ALL"),
     BookingsPage(),
     ServicesPage(),
     SettingsPage(),

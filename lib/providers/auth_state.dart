@@ -19,6 +19,62 @@ class PhoneAuthNotifier extends StateNotifier<UserModel> {
   PhoneAuthNotifier(this.ref) : super(UserModel.initial());
 
 
+Future<bool> tryAutoLogin() async {
+  final prefs = await SharedPreferences.getInstance();
+
+  // Check if the 'userData' key exists in SharedPreferences
+  if (!prefs.containsKey('userData')) {
+    print('No user data found. tryAutoLogin is set to false.');
+    return false;
+  }
+
+  try {
+    // Retrieve and decode the user data from SharedPreferences
+    final extractedData = json.decode(prefs.getString('userData')!) as Map<String, dynamic>;
+    print("Extracted data from SharedPreferences: $extractedData");
+
+    // Validate that all necessary keys exist in the extracted data
+    if (extractedData.containsKey('statusCode') &&
+        extractedData.containsKey('success') &&
+        extractedData.containsKey('messages') &&
+        extractedData.containsKey('data')) {
+      
+      // Map the JSON data to the UserModel
+      final userModel = UserModel.fromJson(extractedData);
+      print("User Model from SharedPreferences: $userModel");
+
+      // Validate nested data structure
+      if (userModel.data != null && userModel.data!.isNotEmpty) {
+        final firstData = userModel.data![0]; // Access the first element in the list
+        if (firstData.user == null || firstData.accessToken == null) {
+          print('Invalid user data structure inside SharedPreferences.');
+          return false;
+        }
+      }
+
+      // Update the state with the decoded user data
+      state = state.copyWith(
+        statusCode: userModel.statusCode,
+        success: userModel.success,
+        messages: userModel.messages,
+        data: userModel.data,
+      );
+
+      print('User ID from auto-login: ${state.data?[0].user?.sId}'); // Accessing User ID from the first Data object
+      return true;
+    } else {
+      print('Necessary fields are missing in SharedPreferences.');
+      return false;
+    }
+  } catch (e, stackTrace) {
+    // Log the error for debugging purposes
+    print('Error while parsing user data: $e');
+    print(stackTrace);
+    return false;
+  }
+}
+
+
  // Profile Update Method
   // Future<void> updateProfile(String? name, String? email, String? phone, File?_selectedImage) async {
   //   final prefs = await SharedPreferences.getInstance();
@@ -179,103 +235,7 @@ class PhoneAuthNotifier extends StateNotifier<UserModel> {
 }
 
 
-//   Future<bool> tryAutoLogin() async {
-//   final prefs = await SharedPreferences.getInstance();
 
-//   // Check if the 'userData' key is present in SharedPreferences
-//   if (!prefs.containsKey('userData')) {
-//     print('No user data found. tryAutoLogin is set to false.');
-//     return false;
-//   }
-
-//   try {
-//     // Retrieve and decode the user data from SharedPreferences
-//     final extractedData = json.decode(prefs.getString('userData')!) as Map<String, dynamic>;
-
-//     // Ensure the extracted data contains the necessary keys
-//     if (extractedData.containsKey('statusCode') &&
-//         extractedData.containsKey('success') &&
-//         extractedData.containsKey('messages') &&
-//         extractedData.containsKey('data')) {
-      
-//       // Map the JSON data to your UserModel
-//       UserModel userModel = UserModel.fromJson(extractedData);
-
-//       // Update the state with the decoded user data
-//       state = state.copyWith(
-//         statusCode: userModel.statusCode,
-//         success: userModel.success,
-//         messages: userModel.messages,
-//         data: userModel.data,
-//       );
-
-//       print('User ID: ${state.data?.user?.sId}');  // Accessing the User ID from the nested Data
-
-//       return true;
-//     } else {
-//       print('Missing necessary fields in SharedPreferences.');
-//       return false;
-//     }
-//   } catch (e) {
-//     print('Error while parsing user data: $e');
-//     return false;
-//   }
-// }
-
-Future<bool> tryAutoLogin() async {
-  final prefs = await SharedPreferences.getInstance();
-
-  // Check if the 'userData' key exists in SharedPreferences
-  if (!prefs.containsKey('userData')) {
-    print('No user data found. tryAutoLogin is set to false.');
-    return false;
-  }
-
-  try {
-    // Retrieve and decode the user data from SharedPreferences
-    final extractedData = json.decode(prefs.getString('userData')!) as Map<String, dynamic>;
-    print("Extracted data from SharedPreferences: $extractedData");
-
-    // Validate that all necessary keys exist in the extracted data
-    if (extractedData.containsKey('statusCode') &&
-        extractedData.containsKey('success') &&
-        extractedData.containsKey('messages') &&
-        extractedData.containsKey('data')) {
-      
-      // Map the JSON data to the UserModel
-      final userModel = UserModel.fromJson(extractedData);
-      print("User Model from SharedPreferences: $userModel");
-
-      // Validate nested data structure
-      if (userModel.data != null && userModel.data!.isNotEmpty) {
-        final firstData = userModel.data![0]; // Access the first element in the list
-        if (firstData.user == null || firstData.accessToken == null) {
-          print('Invalid user data structure inside SharedPreferences.');
-          return false;
-        }
-      }
-
-      // Update the state with the decoded user data
-      state = state.copyWith(
-        statusCode: userModel.statusCode,
-        success: userModel.success,
-        messages: userModel.messages,
-        data: userModel.data,
-      );
-
-      print('User ID from auto-login: ${state.data?[0].user?.sId}'); // Accessing User ID from the first Data object
-      return true;
-    } else {
-      print('Necessary fields are missing in SharedPreferences.');
-      return false;
-    }
-  } catch (e, stackTrace) {
-    // Log the error for debugging purposes
-    print('Error while parsing user data: $e');
-    print(stackTrace);
-    return false;
-  }
-}
 
   Future<void> verifyPhoneNumber(
     String phoneNumber,
@@ -441,7 +401,7 @@ Future<bool> tryAutoLogin() async {
 
   try {
     loadingState.state = true; // Show loading state
-final client = RetryClient(
+    final client = RetryClient(
         http.Client(),
         retries: 4,
         when: (response) {
@@ -488,10 +448,11 @@ final client = RetryClient(
     loadingState.state = false; // Hide loading state
   }
 }
+
+
 Future<String> restoreAccessToken() async {
     
-    final url =
-         Bbapi.refreshToken; 
+    const url =Bbapi.refreshToken; 
 
     final prefs = await SharedPreferences.getInstance();
 
@@ -517,54 +478,54 @@ Future<String> restoreAccessToken() async {
           break;
        // loading(false); // Update loading state
         case 200:
-  print("Refresh access token success");
+          print("Refresh access token success");
 
-  // Extract the new access token and refresh token
-  final newAccessToken = userDetails['data']['access_token'];
-  final newRefreshToken = userDetails['data']['refresh_token'];
+          // Extract the new access token and refresh token
+          final newAccessToken = userDetails['data']['access_token'];
+          final newRefreshToken = userDetails['data']['refresh_token'];
 
-  print('New access token: $newAccessToken');
-  print('New refresh token: $newRefreshToken');
+          print('New access token: $newAccessToken');
+          print('New refresh token: $newRefreshToken');
 
-  // Retrieve existing user data from SharedPreferences
-  String? storedUserData = prefs.getString('userData');
+          // Retrieve existing user data from SharedPreferences
+          String? storedUserData = prefs.getString('userData');
 
-  if (storedUserData != null) {
-    // Parse the stored user data into a UserModel object
-    UserModel user = UserModel.fromJson(json.decode(storedUserData));
+          if (storedUserData != null) {
+            // Parse the stored user data into a UserModel object
+            UserModel user = UserModel.fromJson(json.decode(storedUserData));
 
-    // Update the accessToken and refreshToken in the existing data model
-    user = user.copyWith(
-      data: [
-        user.data![0].copyWith(
-          accessToken: newAccessToken,
-          refreshToken: newRefreshToken,
-        ),
-      ],
-    );
-        // Convert the updated UserModel back to JSON
-    final updatedUserData = json.encode({
-      'statusCode': user.statusCode,
-      'success': user.success,
-      'messages': user.messages,
-      'data': user.data?.map((data) => data.toJson()).toList(),
-    });
+            // Update the accessToken and refreshToken in the existing data model
+            user = user.copyWith(
+              data: [
+                user.data![0].copyWith(
+                  accessToken: newAccessToken,
+                  refreshToken: newRefreshToken,
+                ),
+              ],
+            );
+                // Convert the updated UserModel back to JSON
+            final updatedUserData = json.encode({
+              'statusCode': user.statusCode,
+              'success': user.success,
+              'messages': user.messages,
+              'data': user.data?.map((data) => data.toJson()).toList(),
+            });
 
-    // Debug: Print updated user data before saving
-    print("Updated User Data to Save in SharedPreferences: $updatedUserData");
+            // Debug: Print updated user data before saving
+            print("Updated User Data to Save in SharedPreferences: $updatedUserData");
 
-    // Save the updated user data in SharedPreferences
-    await prefs.setString('userData', updatedUserData);
+            // Save the updated user data in SharedPreferences
+            await prefs.setString('userData', updatedUserData);
 
-    // Debug: Print user data after saving
-    print("User Data saved in SharedPreferences: ${prefs.getString('userData')}");
-  } else {
-    // Handle the case where there is no existing user data in SharedPreferences
-    print("No user data found in SharedPreferences.");
-  }
+            // Debug: Print user data after saving
+            print("User Data saved in SharedPreferences: ${prefs.getString('userData')}");
+          } else {
+            // Handle the case where there is no existing user data in SharedPreferences
+            print("No user data found in SharedPreferences.");
+          }
 
         // loading(false); // Update loading state
-      }
+       }
     } on FormatException catch (formatException) {
       print('Format Exception: ${formatException.message}');
       print('Invalid response format.');

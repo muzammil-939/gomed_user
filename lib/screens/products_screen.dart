@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import 'package:gomed_user/model/product.dart';
 import 'package:gomed_user/providers/products.dart';
 import 'package:gomed_user/screens/cart_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ProductsScreen extends ConsumerStatefulWidget {
-  const ProductsScreen({super.key});
+  final String selectedCategory;
+  const ProductsScreen({super.key, required this.selectedCategory});
 
   @override
   ProductsScreenState createState() => ProductsScreenState();
@@ -15,6 +18,8 @@ class ProductsScreenState extends ConsumerState<ProductsScreen> with TickerProvi
   final ScrollController _scrollController = ScrollController();
   final FocusNode _searchFocusNode = FocusNode();
    TabController? _tabController;
+   int cartItemCount = 0; // To track cart count
+
 
   @override
   void initState() {
@@ -23,6 +28,7 @@ class ProductsScreenState extends ConsumerState<ProductsScreen> with TickerProvi
       // final productState = ref.watch(productProvider);
       // final categories = productState.data?.map((p) => p.category).toSet().toList() ?? [];
       ref.read(productProvider.notifier).fetchProducts();
+       loadCartItemCount();
       
     });
   }
@@ -35,18 +41,32 @@ class ProductsScreenState extends ConsumerState<ProductsScreen> with TickerProvi
     super.dispose();
   }
 
+  // Load cart item count from SharedPreferences
+  Future<void> loadCartItemCount() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    List<String> cartItems = prefs.getStringList('cartItems') ?? [];
+    setState(() {
+      cartItemCount = cartItems.length;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    
-final productState = ref.watch(productProvider);
-List<String> categories = ["ALL"]; // Start with "ALL" tab
-categories.addAll(productState.data?.map((p) => p.category).whereType<String>().toSet().toList() ?? []);
+        
+    final productState = ref.watch(productProvider);
+    List<String> categories = ["ALL"]; // Start with "ALL" tab
+    categories.addAll(productState.data?.map((p) => p.category).whereType<String>().toSet().toList() ?? []);
 
-// Ensure TabController gets the updated category list
-if (_tabController == null || _tabController!.length != categories.length) {
-  _tabController = TabController(length: categories.length, vsync: this);
-}
-
+   // Ensure TabController gets updated and selects the correct tab
+    if (_tabController == null || _tabController!.length != categories.length) {
+      int initialIndex =
+          categories.indexOf(widget.selectedCategory); // Find selected category
+      _tabController = TabController(
+        length: categories.length,
+        vsync: this,
+        initialIndex: initialIndex >= 0 ? initialIndex : 0,
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -58,14 +78,36 @@ if (_tabController == null || _tabController!.length != categories.length) {
         ),
         title: _buildSearchBar(),
          actions: [
-          IconButton(
-            icon: const Icon(Icons.shopping_cart, color: Colors.white),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const CartScreen()),
-              );
-            },
+          Stack(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.shopping_cart, color: Colors.white),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const CartScreen()),
+                  );
+                },
+              ),
+              if (cartItemCount > 0)
+                Positioned(
+                  right: 6,
+                  top: 12,
+                  child: Container(
+                    padding: const EdgeInsets.all(3),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(25),
+                    ),
+                    constraints: const BoxConstraints(minWidth: 10, minHeight: 10),
+                    child: Text(
+                      '$cartItemCount',
+                      style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ],
           ),
         ],
       ),
@@ -73,7 +115,9 @@ if (_tabController == null || _tabController!.length != categories.length) {
           ? const Center(child: CircularProgressIndicator()) // Show loading indicator until data is available
       : Column(
         children: [
+          const SizedBox(height: 5,),
           _buildFilterButtonsRow(),
+          const SizedBox(height: 5,),
           Container(
             color: Colors.white,
             child: TabBar(
@@ -155,6 +199,15 @@ Widget _buildProductCard(Data product) {
   return LayoutBuilder(
     builder: (context, constraints) {
       final screenWidth = MediaQuery.of(context).size.width;
+     
+      // Truncate text if it's too long
+      String truncatedName = product.productName != null && product.productName!.length > 10
+          ? "${product.productName!.substring(0, 10)}..."
+          : product.productName ?? '';
+
+      String truncatedDescription = product.productDescription != null && product.productDescription!.length > 20
+          ? "${product.productDescription!.substring(0, 20)}..."
+          : product.productDescription ?? '';
 
       return Card(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -177,8 +230,8 @@ Widget _buildProductCard(Data product) {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(product.productName ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
-                  Text(product.productDescription ?? '', maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.grey)),
+                  Text(truncatedName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  Text(truncatedDescription, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.grey)),
                   Text("₹${product.price}", style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
                 ],
               ),
@@ -190,15 +243,13 @@ Widget _buildProductCard(Data product) {
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF1BA4CA),
-                    minimumSize: Size(double.infinity, screenWidth * 0.1), // Responsive button height
+                    minimumSize: const Size(double.infinity, 50), // Responsive button height
                   ),
-                  onPressed: () {
-                  //    ScaffoldMessenger.of(context).showSnackBar(
-                  //   const SnackBar(content: Text('Added to cart!')),
-                  // );
-                  
+                  onPressed: ()async {
+                
+                  await _addToCart(product.productId!);
                   },
-                  child: const Text("Add to Cart",style: TextStyle(color:Colors.white ),),
+                  child: const Text("Add to Cart",style: TextStyle(color:Colors.white,fontSize: 16 ),),
                 ),
               ),
             ),
@@ -208,6 +259,34 @@ Widget _buildProductCard(Data product) {
     },
   );
 }
+// Function to store product ID in SharedPreferences
+Future<void> _addToCart(String productId) async {
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+  List<String> cartItems = prefs.getStringList('cartItems') ?? [];
+
+  if (!cartItems.contains(productId)) {
+    cartItems.add(productId);
+    await prefs.setStringList('cartItems', cartItems);
+      setState(() {
+        cartItemCount = cartItems.length;
+      });
+     if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              "Item added to cart",
+              style: TextStyle(color: Colors.white),
+            ),
+            duration:  Duration(seconds: 2),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+     }
+   // Show Scaffold Messenger
+     
+    }
+
 
 
   Widget _buildFilterButtonsRow() {
