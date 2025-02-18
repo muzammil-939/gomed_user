@@ -1,42 +1,60 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gomed_user/screens/products_screen.dart';
 import 'package:gomed_user/screens/profile_screen.dart';
 import 'package:gomed_user/screens/settings_screen.dart';
 import 'package:gomed_user/screens/services.dart';
+import 'package:gomed_user/providers/auth_state.dart';
+import 'package:gomed_user/model/auth.dart';
 
 import 'booking_screen.dart';
 import 'home_page_content.dart';
 
-class HomePage extends StatefulWidget {
+class HomePage extends ConsumerStatefulWidget { 
   const HomePage({super.key});
 
   @override
-  _HomePageState createState() => _HomePageState();
+  ConsumerState<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends ConsumerState<HomePage> {
   int _selectedIndex = 0;
+  String selectedCategory = "ALL";
 
-  // List of pages to navigate to
-  static const List<Widget> _pages = <Widget>[
-    HomePageContent(),
-    ProfilePage(),
-    ProductsScreen(selectedCategory: "ALL"),
-    BookingsPage(),
-    ServicesPage(),
-    SettingsPage(),
+  void _onCategorySelected(int index) {
+    setState(() {
+      _selectedIndex = 2; // Navigate to products screen
+    });
+  }
 
-  ];
-
-  // Function to handle page switching
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
     });
   }
 
+  List<Widget> get _pages => [
+        HomePageContent(onCategorySelected: _onCategorySelected),
+        const ProfilePage(),
+        ProductsScreen(selectedCategory: selectedCategory),
+        BookingsPage(),
+        ServicesPage(),
+        SettingsPage(),
+      ];
+
   @override
   Widget build(BuildContext context) {
+    final userModel = ref.watch(userProvider);
+    String ownerName = "User";
+    String? profileImage;
+
+    if (userModel.data != null && userModel.data!.isNotEmpty) {
+      final user = userModel.data![0].user;
+      ownerName = user?.ownerName ?? "User";
+      profileImage =
+          user?.profileImage?.isNotEmpty == true ? user!.profileImage![0] : null;
+    }
+
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: _selectedIndex == 0
@@ -44,15 +62,19 @@ class _HomePageState extends State<HomePage> {
               backgroundColor: Colors.grey[100],
               elevation: 0,
               title: Row(
-                mainAxisAlignment: MainAxisAlignment.start,
                 children: [
-                  const CircleAvatar(
-                    backgroundImage: AssetImage("assets/gomedlogo.png"),
-                  ),
+                  if (profileImage != null)
+                    CircleAvatar(
+                      backgroundImage: NetworkImage(profileImage),
+                    )
+                  else
+                    const CircleAvatar(
+                      backgroundImage: AssetImage("assets/gomedlogo.png"),
+                    ),
                   SizedBox(width: MediaQuery.of(context).size.width * 0.02),
-                  const Text(
-                    'Welcome,\n[User Name]!',
-                    style: TextStyle(
+                  Text(
+                    'Welcome,\n$ownerName', // Interpolation for name
+                    style: const TextStyle(
                       color: Color.fromARGB(255, 36, 16, 16),
                       fontWeight: FontWeight.bold,
                     ),
@@ -66,7 +88,7 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
             )
-          : null, // Only show AppBar on the Home Page
+          : null,
       body: _pages[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: const Color(0xFF1BA4CA),
@@ -78,13 +100,11 @@ class _HomePageState extends State<HomePage> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
-          BottomNavigationBarItem(icon: Icon(Icons.inventory),  label: 'Products'),
+          BottomNavigationBarItem(icon: Icon(Icons.inventory), label: 'Products'),
           BottomNavigationBarItem(icon: Icon(Icons.book), label: 'Bookings'),
           BottomNavigationBarItem(
               icon: Icon(Icons.miscellaneous_services), label: 'Services'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.settings), label: 'Settings'),
-
+          BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
         ],
       ),
     );

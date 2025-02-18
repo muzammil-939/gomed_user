@@ -55,7 +55,8 @@ class ProductModel {
 
 class Data {
   String? productId;
-  String? distributorId;
+  String? firmName;
+  String? ownerName;
   String? productName;
   String? productDescription;
   double? price;
@@ -65,7 +66,8 @@ class Data {
 
   Data({
     this.productId,
-    this.distributorId,
+    this.firmName,
+    this.ownerName,
     this.productName,
     this.productDescription,
     this.price,
@@ -77,7 +79,8 @@ class Data {
   factory Data.initial() {
     return Data(
       productId: '',
-      distributorId: '',
+      firmName: '',
+      ownerName: '',
       productName: '',
       productDescription: '',
       price: 0.0,
@@ -89,7 +92,8 @@ class Data {
 
   Data copyWith({
     String? productId,
-    String? distributorId,
+    String? firmName,
+    String? ownerName,
     String? productName,
     String? productDescription,
     double? price,
@@ -99,7 +103,8 @@ class Data {
   }) {
     return Data(
       productId: productId ?? this.productId,
-      distributorId: distributorId ?? this.distributorId,
+      firmName: firmName ?? this.firmName,
+      ownerName: ownerName?? this.ownerName,
       productName: productName ?? this.productName,
       productDescription: productDescription ?? this.productDescription,
       price: price ?? this.price,
@@ -111,7 +116,8 @@ class Data {
 
 Data.fromJson(Map<String, dynamic> json) {
   productId = json['productId'];
-  distributorId = json['distributorId'];
+  firmName = json['firmName'];
+  ownerName = json['ownerName'];
   productName = json['productName'];
   productDescription = json['productDescription'];
   price = json['price'] is int ? (json['price'] as int).toDouble() : json['price'];
@@ -125,7 +131,8 @@ Data.fromJson(Map<String, dynamic> json) {
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = {};
     data['productId'] = productId;
-    data['distributorId'] = distributorId;
+    data['firmName'] = firmName;
+    data['ownerName'] = ownerName;
     data['productName'] = productName;
     data['productDescription'] = productDescription;
     data['price'] = price;

@@ -6,29 +6,17 @@ class UserModel {
 
   UserModel({this.statusCode, this.success, this.messages, this.data});
 
-  UserModel.fromJson(Map<String, dynamic> json) {
-    statusCode = json['statusCode'];
-    success = json['success'];
-    messages = json['messages'].cast<String>();
-    if (json['data'] != null) {
-      data = <Data>[];
-      json['data'].forEach((v) {
-        data!.add(Data.fromJson(v));
-      });
-    }
+  // Initial method
+  factory UserModel.initial() {
+    return UserModel(
+      statusCode: 0,
+      success: false,
+      messages: [],
+      data: [],
+    );
   }
 
-  Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = {};
-    data['statusCode'] = this.statusCode;
-    data['success'] = this.success;
-    data['messages'] = this.messages;
-    if (this.data != null) {
-      data['data'] = this.data!.map((v) => v.toJson()).toList();
-    }
-    return data;
-  }
-
+  // CopyWith method
   UserModel copyWith({
     int? statusCode,
     bool? success,
@@ -43,11 +31,30 @@ class UserModel {
     );
   }
 
-  UserModel.initial()
-      : statusCode = 0,
-        success = false,
-        messages = [],
-        data = [];
+  UserModel.fromJson(Map<String, dynamic> json) {
+    statusCode = json['statusCode'];
+    success = json['success'];
+    messages = json['messages'] != null
+        ? List<String>.from(json['messages'])
+        : null;
+    if (json['data'] != null) {
+      data = <Data>[];
+      json['data'].forEach((v) {
+        data!.add(Data.fromJson(v));
+      });
+    }
+  }
+
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic> data = Map<String, dynamic>();
+    data['statusCode'] = statusCode;
+    data['success'] = success;
+    data['messages'] = messages;
+    if (this.data != null) {
+      data['data'] = this.data!.map((v) => v.toJson()).toList();
+    }
+    return data;
+  }
 }
 
 class Data {
@@ -57,22 +64,16 @@ class Data {
 
   Data({this.accessToken, this.refreshToken, this.user});
 
-  Data.fromJson(Map<String, dynamic> json) {
-    accessToken = json['access_token'];
-    refreshToken = json['refresh_token'];
-    user = json['user'] != null ? User.fromJson(json['user']) : null;
+  // Initial method
+  factory Data.initial() {
+    return Data(
+      accessToken: '',
+      refreshToken: '',
+      user: User.initial(),
+    );
   }
 
-  Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = {};
-    data['access_token'] = this.accessToken;
-    data['refresh_token'] = this.refreshToken;
-    if (this.user != null) {
-      data['user'] = this.user!.toJson();
-    }
-    return data;
-  }
-
+  // CopyWith method
   Data copyWith({
     String? accessToken,
     String? refreshToken,
@@ -85,149 +86,186 @@ class Data {
     );
   }
 
-  Data.initial()
-      : accessToken = "",
-        refreshToken = "",
-        user = User.initial();
+  Data.fromJson(Map<String, dynamic> json) {
+    accessToken = json['access_token'];
+    refreshToken = json['refresh_token'];
+    user = json['user'] != null ? User.fromJson(json['user']) : null;
+  }
+
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic> data = Map<String, dynamic>();
+    data['access_token'] = accessToken;
+    data['refresh_token'] = refreshToken;
+    if (user != null) {
+      data['user'] = user!.toJson();
+    }
+    return data;
+  }
 }
 
 class User {
-  String? sId;
   String? mobile;
   String? password;
   String? role;
+  String? name;
   String? email;
   String? address;
   String? employeeNumber;
   String? certificate;
   String? experience;
   String? ownerName;
-  String? photo;
+  String? profileImage;
   String? aadhar;
   String? gstNumber;
   String? firmName;
   String? activity;
-  List<dynamic>? products;
+  String? products;
+  String? sId;
+  String? createdAt;
+  String? updatedAt;
   int? iV;
 
   User({
-    this.sId,
     this.mobile,
     this.password,
     this.role,
+    this.name,
     this.email,
     this.address,
     this.employeeNumber,
     this.certificate,
     this.experience,
     this.ownerName,
-    this.photo,
+    this.profileImage,
     this.aadhar,
     this.gstNumber,
     this.firmName,
     this.activity,
     this.products,
+    this.sId,
+    this.createdAt,
+    this.updatedAt,
     this.iV,
   });
 
-  User.fromJson(Map<String, dynamic> json) {
-    sId = json['_id'];
-    mobile = json['mobile'];
-    password = json['password'];
-    role = json['role'];
-    email = json['email'];
-    address = json['address'];
-    employeeNumber = json['employeeNumber'];
-    certificate = json['certificate'];
-    experience = json['experience'];
-    ownerName = json['ownerName'];
-    photo = json['photo'];
-    aadhar = json['aadhar'];
-    gstNumber = json['gstNumber'];
-    firmName = json['firmName'];
-    activity = json['activity'];
-    products = json['products'] ?? [];
-    iV = json['__v'];
+  // Initial method
+  factory User.initial() {
+    return User(
+      mobile: '',
+      password: '',
+      role: '',
+      name: '',
+      email: '',
+      address: '',
+      employeeNumber: '',
+      certificate: '',
+      experience: '',
+      ownerName: '',
+      profileImage: '',
+      aadhar: '',
+      gstNumber: '',
+      firmName: '',
+      activity: '',
+      products: '',
+      sId: '',
+      createdAt: '',
+      updatedAt: '',
+      iV: 0,
+    );
   }
 
-  Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = {};
-    data['_id'] = this.sId;
-    data['mobile'] = this.mobile;
-    data['password'] = this.password;
-    data['role'] = this.role;
-    data['email'] = this.email;
-    data['address'] = this.address;
-    data['employeeNumber'] = this.employeeNumber;
-    data['certificate'] = this.certificate;
-    data['experience'] = this.experience;
-    data['ownerName'] = this.ownerName;
-    data['photo'] = this.photo;
-    data['aadhar'] = this.aadhar;
-    data['gstNumber'] = this.gstNumber;
-    data['firmName'] = this.firmName;
-    data['activity'] = this.activity;
-    data['products'] = this.products;
-    data['__v'] = this.iV;
-    return data;
-  }
-
+  // CopyWith method
   User copyWith({
-    String? sId,
     String? mobile,
     String? password,
     String? role,
+    String? name,
     String? email,
     String? address,
     String? employeeNumber,
     String? certificate,
     String? experience,
     String? ownerName,
-    String? photo,
+    String? profileImage,
     String? aadhar,
     String? gstNumber,
     String? firmName,
     String? activity,
-    List<dynamic>? products,
+    String? products,
+    String? sId,
+    String? createdAt,
+    String? updatedAt,
     int? iV,
   }) {
     return User(
-      sId: sId ?? this.sId,
       mobile: mobile ?? this.mobile,
       password: password ?? this.password,
       role: role ?? this.role,
+      name: name ?? this.name,
       email: email ?? this.email,
       address: address ?? this.address,
       employeeNumber: employeeNumber ?? this.employeeNumber,
       certificate: certificate ?? this.certificate,
       experience: experience ?? this.experience,
       ownerName: ownerName ?? this.ownerName,
-      photo: photo ?? this.photo,
+      profileImage: profileImage ?? this.profileImage,
       aadhar: aadhar ?? this.aadhar,
       gstNumber: gstNumber ?? this.gstNumber,
       firmName: firmName ?? this.firmName,
       activity: activity ?? this.activity,
       products: products ?? this.products,
+      sId: sId ?? this.sId,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
       iV: iV ?? this.iV,
     );
   }
 
-  User.initial()
-      : sId = "",
-        mobile = "",
-        password = "",
-        role = "",
-        email = "",
-        address = "",
-        employeeNumber = "",
-        certificate = "",
-        experience = "",
-        ownerName = "",
-        photo = "",
-        aadhar = "",
-        gstNumber = "",
-        firmName = "",
-        activity = "",
-        products = [],
-        iV = 0;
+  User.fromJson(Map<String, dynamic> json) {
+    mobile = json['mobile'];
+    password = json['password'];
+    role = json['role'];
+    name = json['name'];
+    email = json['email'];
+    address = json['address'];
+    employeeNumber = json['employeeNumber'];
+    certificate = json['certificate'];
+    experience = json['experience'];
+    ownerName = json['ownerName'];
+    profileImage = json['profileImage'];
+    aadhar = json['aadhar'];
+    gstNumber = json['gstNumber'];
+    firmName = json['firmName'];
+    activity = json['activity'];
+    products = json['products'];
+    sId = json['_id'];
+    createdAt = json['createdAt'];
+    updatedAt = json['updatedAt'];
+    iV = json['__v'];
+  }
+
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic> data = Map<String, dynamic>();
+    data['mobile'] = mobile;
+    data['password'] = password;
+    data['role'] = role;
+    data['name'] = name;
+    data['email'] = email;
+    data['address'] = address;
+    data['employeeNumber'] = employeeNumber;
+    data['certificate'] = certificate;
+    data['experience'] = experience;
+    data['ownerName'] = ownerName;
+    data['profileImage'] = profileImage;
+    data['aadhar'] = aadhar;
+    data['gstNumber'] = gstNumber;
+    data['firmName'] = firmName;
+    data['activity'] = activity;
+    data['products'] = products;
+    data['_id'] = sId;
+    data['createdAt'] = createdAt;
+    data['updatedAt'] = updatedAt;
+    data['__v'] = iV;
+    return data;
+  }
 }

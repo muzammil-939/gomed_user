@@ -139,7 +139,7 @@ Future<bool> tryAutoLogin() async {
  // final userId = prefs.getString('userId');
  // final token = prefs.getString('firebaseToken');
 
-  print('name--$name, email--$email, mobile--$phone, photo--${selectedImage?.path}');
+  print('name--$name, email--$email, mobile--$phone, profileImage--${selectedImage?.path}');
 
   if (userId == null || token == null) {
     print('User ID or Firebase token is missing.');
@@ -174,12 +174,13 @@ Future<bool> tryAutoLogin() async {
       })
       ..fields['ownerName'] = name ?? ''
       ..fields['email'] = email ?? ''
-      ..fields['mobile'] = phone ?? '';
+      ..fields['mobile'] = phone ?? ''
+      ..fields['role'] = 'user' ;
 
     if (selectedImage != null) {
       if (await selectedImage.exists()) {
         request.files.add(await http.MultipartFile.fromPath(
-          'photo',
+          'profileImage',
           selectedImage.path,
         ));
       } else {
@@ -285,7 +286,7 @@ Future<bool> tryAutoLogin() async {
     final loadingState = ref.watch(loadingProvider.notifier);
      var pref = await SharedPreferences.getInstance();
      String? verificationid = pref.getString('verificationid');
-     print('verificatiomid...$verificationid ');
+     print('verificationid...of user$verificationid ');
     
     try {
       loadingState.state = true;
@@ -349,10 +350,11 @@ Future<bool> tryAutoLogin() async {
         }),
       );
       
-
+         print('stutus code${response.statusCode}');
       if (response.statusCode == 201 || response.statusCode == 200) {
         print("Data successfully sent to the API.");
         var userDetails = json.decode(response.body);
+        print('login response${response.body}');
         UserModel user = UserModel.fromJson(userDetails);
         print("Response: ${response.body}");
 
@@ -362,14 +364,17 @@ Future<bool> tryAutoLogin() async {
          //state=state.copyWith(messages:userDetails['message'],
         
          //data: [Data.fromJson(userDetails['user'])],); // Assuming userDetails['user'] maps to the Data model
+         print("Messages before encoding: ${user.messages}");
+         print("Data before encoding: ${user.data}");
+
          state = user;
-         final userData = json.encode({
-        //'accessToken': user.data?[0].accessToken,
-        'statusCode':user.statusCode,
-        'success':user.success,
-        'messages':user.messages,
-        'data': user.data?.map((data) => data.toJson()).toList(), // Serialize all Data objects
-     });
+           final userData = json.encode({
+           'statusCode': user.statusCode,
+            'success': user.success,
+                'messages': user.messages != null ? List<String>.from(user.messages!) : [],
+               'data': user.data?.map((data) => data.toJson()).toList(),
+           });
+
          // Debug: Print userData before saving
           print("User Data to Save in SharedPreferences: $userData");
 

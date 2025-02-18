@@ -4,7 +4,8 @@ import 'package:gomed_user/providers/products.dart';
 import 'package:gomed_user/screens/products_screen.dart';
 
 class HomePageContent extends ConsumerStatefulWidget {
-  const HomePageContent({super.key});
+  final Function(int) onCategorySelected; // Callback function to switch tab
+  const HomePageContent({super.key,required this.onCategorySelected });
 
   @override
   _HomePageContentState createState() => _HomePageContentState();
@@ -113,13 +114,15 @@ class _HomePageContentState extends ConsumerState<HomePageContent> {
         itemBuilder: (context, index) {
           return GestureDetector(
             onTap: () {
+               //widget.onCategorySelected(index); // Switch to Products tab
               Navigator.push(
                 context,
-                MaterialPageRoute(
+                MaterialPageRoute( 
                   builder: (context) =>
                       ProductsScreen(selectedCategory: categories[index]),
                 ),
               );
+              
             },
             child: Container(
               margin: const EdgeInsets.symmetric(horizontal: 8.0),

@@ -5,6 +5,7 @@ import 'package:gomed_user/model/product.dart';
 import 'package:gomed_user/providers/products.dart';
 import 'package:gomed_user/screens/cart_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import "package:gomed_user/screens/products_details.dart";
 
 class ProductsScreen extends ConsumerStatefulWidget {
   final String selectedCategory;
@@ -27,10 +28,27 @@ class ProductsScreenState extends ConsumerState<ProductsScreen> with TickerProvi
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // final productState = ref.watch(productProvider);
       // final categories = productState.data?.map((p) => p.category).toSet().toList() ?? [];
-      ref.read(productProvider.notifier).fetchProducts();
-       loadCartItemCount();
-      
+      ref.read(productProvider.notifier).fetchProducts().then((_){
+       
+      _initializeTabController();
     });
+    loadCartItemCount();
+     });
+
+  }
+
+   // Method to initialize the TabController
+  void _initializeTabController() {
+    final productState = ref.watch(productProvider);
+    List<String> categories = ["ALL"]; // Start with "ALL" tab
+    categories.addAll(productState.data?.map((p) => p.category).whereType<String>().toSet().toList() ?? []);
+
+    int initialIndex = categories.indexOf(widget.selectedCategory); // Find selected category index
+    _tabController = TabController(
+      length: categories.length,
+      vsync: this,
+      initialIndex: initialIndex >= 0 ? initialIndex : 0,
+    );
   }
 
   @override
@@ -48,6 +66,10 @@ class ProductsScreenState extends ConsumerState<ProductsScreen> with TickerProvi
     setState(() {
       cartItemCount = cartItems.length;
     });
+  }
+
+  void _updateCartCount() {
+    loadCartItemCount(); // Recalculate and setState
   }
 
   @override
@@ -82,11 +104,16 @@ class ProductsScreenState extends ConsumerState<ProductsScreen> with TickerProvi
             children: [
               IconButton(
                 icon: const Icon(Icons.shopping_cart, color: Colors.white),
-                onPressed: () {
-                  Navigator.push(
+                onPressed: () async {
+                  await Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => const CartScreen()),
                   );
+                  
+                    await loadCartItemCount();
+                    setState(() {});  // ✅ Refresh UI after cart update
+
+                  
                 },
               ),
               if (cartItemCount > 0)
@@ -133,7 +160,7 @@ class ProductsScreenState extends ConsumerState<ProductsScreen> with TickerProvi
             child: TabBarView(
               controller: _tabController,
               children: categories.map((category) => 
-                   _buildCategoryContent(category)
+                   _buildCategoryContent(category, _updateCartCount)
                      ).toList(),
 
             ),
@@ -169,7 +196,7 @@ class ProductsScreenState extends ConsumerState<ProductsScreen> with TickerProvi
     );
   }
 
- Widget _buildCategoryContent(String category) {
+ Widget _buildCategoryContent(String category, VoidCallback updateCartCount ) {
   final productState = ref.watch(productProvider);
   final products = category == "ALL" 
       ? productState.data ?? [] // Show all products in "ALL" tab
@@ -180,7 +207,7 @@ class ProductsScreenState extends ConsumerState<ProductsScreen> with TickerProvi
   }
 
   return GridView.builder(
-    shrinkWrap: false,
+    shrinkWrap: true,
     physics: const AlwaysScrollableScrollPhysics(),  // ✅ Allows scrolling inside TabBarView
     padding: const EdgeInsets.all(10),
     gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -190,75 +217,111 @@ class ProductsScreenState extends ConsumerState<ProductsScreen> with TickerProvi
       mainAxisSpacing: 10,
     ),
     itemCount: products.length,
-    itemBuilder: (context, index) => _buildProductCard(products[index]),
+    itemBuilder: (context, index) => _buildProductCard(products[index], updateCartCount),
   );
 }
 
 
-Widget _buildProductCard(Data product) {
-  return LayoutBuilder(
-    builder: (context, constraints) {
-      final screenWidth = MediaQuery.of(context).size.width;
-     
-      // Truncate text if it's too long
-      String truncatedName = product.productName != null && product.productName!.length > 10
-          ? "${product.productName!.substring(0, 10)}..."
-          : product.productName ?? '';
+Widget _buildProductCard(Data product, VoidCallback updateCartCount) {
+  return FutureBuilder<List<String>>(
+    future: _getCartItems(), // Fetch cart items
+    builder: (context, snapshot) {
+      bool isInCart = snapshot.hasData && snapshot.data!.contains(product.productId);
 
-      String truncatedDescription = product.productDescription != null && product.productDescription!.length > 20
-          ? "${product.productDescription!.substring(0, 20)}..."
-          : product.productDescription ?? '';
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final screenWidth = MediaQuery.of(context).size.width;
 
-      return Card(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        elevation: 3,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
-              child: Image.network(
-                "http://97.74.93.26:3000/${product.productImage}",
-                height: screenWidth * 0.3, // Responsive height
-                width: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => const Icon(Icons.image, size: 120),
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.all(screenWidth * 0.02), // Responsive padding
+          String truncatedName = product.productName != null && product.productName!.length > 10
+              ? "${product.productName!.substring(0, 10)}..."
+              : product.productName ?? '';
+
+          String truncatedDescription = product.productDescription != null && product.productDescription!.length > 20
+              ? "${product.productDescription!.substring(0, 20)}..."
+              : product.productDescription ?? '';
+            
+            
+          return GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                 builder: (context)=>ProductsDetails(product:product, updateCartCount: updateCartCount)
+                 ),
+               ).then((_){
+                  updateCartCount();
+               }); 
+              },
+            child: Card(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              elevation: 3,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(truncatedName, style: const TextStyle(fontWeight: FontWeight.bold)),
-                  Text(truncatedDescription, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.grey)),
-                  Text("₹${product.price}", style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                  ClipRRect(
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
+                    child: Image.network(
+                      "http://97.74.93.26:3000/${product.productImage}",
+                      height: screenWidth * 0.3,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => const Icon(Icons.image, size: 120),
+                    ),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.all(screenWidth * 0.02),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(truncatedName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        Text(truncatedDescription, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.grey)),
+                        Text("₹${product.price}", style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.all(screenWidth * 0.02),
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: isInCart ? Colors.orange : const Color(0xFF1BA4CA),
+                          minimumSize: const Size(double.infinity, 50),
+                        ),
+                        onPressed: () async {
+                          if (isInCart) {
+                            Navigator.push(context, MaterialPageRoute(builder: (context) => const CartScreen())
+                            ).then((_){
+                              updateCartCount();
+                            });
+                          } else {
+                            await _addToCart(product.productId!);
+                            updateCartCount();
+                            setState(() {}); // Refresh UI to update button
+                          }
+                        },
+                        child: Text(
+                          isInCart ? "Go to Cart" : "Add to Cart",
+                          style: const TextStyle(color: Colors.white, fontSize: 16),
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
-            //const Spacer(),
-            Expanded(
-              child: Padding(
-                padding: EdgeInsets.all(screenWidth * 0.02),
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1BA4CA),
-                    minimumSize: const Size(double.infinity, 50), // Responsive button height
-                  ),
-                  onPressed: ()async {
-                
-                  await _addToCart(product.productId!);
-                  },
-                  child: const Text("Add to Cart",style: TextStyle(color:Colors.white,fontSize: 16 ),),
-                ),
-              ),
-            ),
-          ],
-        ),
+          );
+        },
       );
     },
   );
 }
+
+// Fetch cart items from SharedPreferences
+Future<List<String>> _getCartItems() async {
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+  return prefs.getStringList('cartItems') ?? [];
+}
+
 // Function to store product ID in SharedPreferences
 Future<void> _addToCart(String productId) async {
   SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -270,6 +333,8 @@ Future<void> _addToCart(String productId) async {
       setState(() {
         cartItemCount = cartItems.length;
       });
+       // ✅ Update cart count immediately
+    //await loadCartItemCount();
      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(

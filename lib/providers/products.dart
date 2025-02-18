@@ -8,13 +8,16 @@ import 'package:gomed_user/utils/gomed_api.dart'; // Import Bbapi class
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:gomed_user/providers/auth_state.dart';
 
+
+
 class ProductProvider extends StateNotifier<ProductModel> {
   final Ref ref; // To access other providers
   ProductProvider(this.ref) : super((ProductModel.initial()));
+  
 
 
 Future<void> fetchProducts() async {
-
+  
   final loadingState = ref.read(loadingProvider.notifier);
   final loginprovider = ref.read(userProvider);
     final token = loginprovider.data?[0].accessToken;

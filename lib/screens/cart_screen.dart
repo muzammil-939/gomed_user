@@ -35,19 +35,34 @@ class CartScreenState extends ConsumerState<CartScreen> {
           .toList();
     }
 
-    // Select all available products by default
-    selectedProductIds = cartProducts.where((p) => p.spareParts ?? true).map((p) => p.productId!).toList();
+    
+    // Select all products by default
+    selectedProductIds = cartProducts.map((p) => p.productId!).toList();
+    // Set default quantity to 1 for each item
+    for (var product in cartProducts) {
+      productQuantities[product.productId!] = productQuantities[product.productId!] ?? 1;
+    }
 
     setState(() {});
-    
+  }
+  // ✅ **Fixed _proceedToBuy() method inside CartScreenState**
+  void _proceedToBuy() {
+    List<Data> selectedProducts = cartProducts
+        .where((product) => product.productId != null && selectedProductIds.contains(product.productId!))
+        .toList();
 
+    print("Proceeding to buy: ${selectedProducts.map((p) => p.productName).toList()}");
   }
 
   @override
   Widget build(BuildContext context) {
-    double totalMRP = cartProducts
-        .where((product) => selectedProductIds.contains(product.productId))
-        .fold(0, (sum, product) => sum + (product.price ?? 0));
+double totalMRP = cartProducts
+    .where((product) => selectedProductIds.contains(product.productId))
+    .fold(0, (sum, product) {
+      int quantity = productQuantities[product.productId!] ?? 1;
+      return sum + ((product.price ?? 0) * quantity);
+    });
+
 
     double discountMRP = 300; // Static discount
     double platformFee = 20;  // Static platform fee
@@ -115,6 +130,7 @@ class CartScreenState extends ConsumerState<CartScreen> {
   }
 
   Widget _buildCartItem(Data product) {
+    int quantity = productQuantities[product.productId!] ?? 1;
     bool isSelected = selectedProductIds.contains(product.productId!);
     bool isAvailable = product.spareParts ?? true;
 
@@ -163,12 +179,35 @@ class CartScreenState extends ConsumerState<CartScreen> {
                       Text(product.productName ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
                       Text(product.productDescription ?? '',
                           maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.grey)),
-                      const Text("Size: mid", style: const TextStyle(fontSize: 14, color: Colors.black54)),
-                      const Text("Qty: 2", style: const TextStyle(fontSize: 14, color: Colors.black54)),
+                      const Text("Size: mid", style: TextStyle(fontSize: 14, color: Colors.black54)),
                       Row(
                         children: [
-                          const Text("33% ", style: const TextStyle(fontSize: 14, color: Colors.green, fontWeight: FontWeight.bold)),
-                          const Text("₹2245", style: const TextStyle(fontSize: 12, decoration: TextDecoration.lineThrough, color: Colors.black45)),
+                          const Text("Qty: ", style: TextStyle(fontSize: 14, color: Colors.black54)),
+                          IconButton(
+                            icon: const Icon(Icons.remove_circle_outline, color: Colors.red),
+                            onPressed: () {
+                              if (quantity > 1) {
+                                setState(() {
+                                  productQuantities[product.productId!] = quantity - 1;
+                                });
+                              }
+                            },
+                          ),
+                          Text("$quantity", style: const TextStyle(fontSize: 14, color: Colors.black54)),
+                          IconButton(
+                            icon: const Icon(Icons.add_circle_outline, color: Colors.green),
+                            onPressed: () {
+                              setState(() {
+                                productQuantities[product.productId!] = quantity + 1;
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                      Row(
+                        children: [
+                          const Text("33% ", style: TextStyle(fontSize: 14, color: Colors.green, fontWeight: FontWeight.bold)),
+                          const Text("₹2245", style: TextStyle(fontSize: 12, decoration: TextDecoration.lineThrough, color: Colors.black45)),
                           const SizedBox(width: 5),
                           Text("₹${product.price}", style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
                         ],
@@ -216,24 +255,29 @@ class CartScreenState extends ConsumerState<CartScreen> {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     cartProductIds.remove(productId);
     await prefs.setStringList('cartItems', cartProductIds);
+
+    // Update the cart product list immediately 
+    cartProducts.removeWhere((product) => product.productId == productId);
+
     // Show SnackBar message
-    ScaffoldMessenger.of(context).showSnackBar(
+    ScaffoldMessenger.of(context).showSnackBar( 
       SnackBar(
         content: const Text(
           "Item removed from cart",
-          style: TextStyle(color: Colors.white), // Set text color to white
+          style: TextStyle(color: Colors.white),
         ),
         duration: const Duration(seconds: 2),
-        backgroundColor: Colors.red, // Set background color to red
+        backgroundColor: Colors.red,
       ),
     );
-    _loadCartItems();
+
+    setState(() {});
   }
 
-  void _proceedToBuy() {
-    List<Data> selectedProducts = cartProducts.where((product) => selectedProductIds.contains(product.productId!)).toList();
-    print("Proceeding to buy: ${selectedProducts.map((p) => p.productName).toList()}");
-  }
+  // void _proceedToBuy() {
+  //   List<Data> selectedProducts = cartProducts.where((product) => selectedProductIds.contains(product.productId!)).toList();
+  //   print("Proceeding to buy: ${selectedProducts.map((p) => p.productName).toList()}");
+  // }
 }
 
 class PriceDetails extends StatelessWidget {
@@ -268,7 +312,10 @@ class PriceDetails extends StatelessWidget {
       Text(value, style: TextStyle(fontWeight: isBold ? FontWeight.bold : FontWeight.normal)),
     ]);
   }
+   
 }
+
+
 
 
 
