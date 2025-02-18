@@ -46,7 +46,7 @@ class UserModel {
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = Map<String, dynamic>();
+    final Map<String, dynamic> data = <String, dynamic>{};
     data['statusCode'] = statusCode;
     data['success'] = success;
     data['messages'] = messages;
@@ -93,7 +93,7 @@ class Data {
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = Map<String, dynamic>();
+    final Map<String, dynamic> data = <String, dynamic>{};
     data['access_token'] = accessToken;
     data['refresh_token'] = refreshToken;
     if (user != null) {
@@ -104,6 +104,7 @@ class Data {
 }
 
 class User {
+  String? sId;
   String? mobile;
   String? password;
   String? role;
@@ -114,18 +115,18 @@ class User {
   String? certificate;
   String? experience;
   String? ownerName;
-  String? profileImage;
+  List<String>? profileImage;
   String? aadhar;
   String? gstNumber;
   String? firmName;
   String? activity;
   String? products;
-  String? sId;
   String? createdAt;
   String? updatedAt;
   int? iV;
 
   User({
+    this.sId,
     this.mobile,
     this.password,
     this.role,
@@ -142,7 +143,6 @@ class User {
     this.firmName,
     this.activity,
     this.products,
-    this.sId,
     this.createdAt,
     this.updatedAt,
     this.iV,
@@ -151,6 +151,7 @@ class User {
   // Initial method
   factory User.initial() {
     return User(
+       sId: '',
       mobile: '',
       password: '',
       role: '',
@@ -161,13 +162,12 @@ class User {
       certificate: '',
       experience: '',
       ownerName: '',
-      profileImage: '',
+      profileImage: [],
       aadhar: '',
       gstNumber: '',
       firmName: '',
       activity: '',
       products: '',
-      sId: '',
       createdAt: '',
       updatedAt: '',
       iV: 0,
@@ -176,6 +176,7 @@ class User {
 
   // CopyWith method
   User copyWith({
+     String? sId,
     String? mobile,
     String? password,
     String? role,
@@ -186,18 +187,18 @@ class User {
     String? certificate,
     String? experience,
     String? ownerName,
-    String? profileImage,
+    List<String>? profileImage,
     String? aadhar,
     String? gstNumber,
     String? firmName,
     String? activity,
     String? products,
-    String? sId,
     String? createdAt,
     String? updatedAt,
     int? iV,
   }) {
     return User(
+      sId: sId ?? this.sId,
       mobile: mobile ?? this.mobile,
       password: password ?? this.password,
       role: role ?? this.role,
@@ -214,7 +215,6 @@ class User {
       firmName: firmName ?? this.firmName,
       activity: activity ?? this.activity,
       products: products ?? this.products,
-      sId: sId ?? this.sId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       iV: iV ?? this.iV,
@@ -222,6 +222,7 @@ class User {
   }
 
   User.fromJson(Map<String, dynamic> json) {
+    sId = json['_id'];
     mobile = json['mobile'];
     password = json['password'];
     role = json['role'];
@@ -232,20 +233,22 @@ class User {
     certificate = json['certificate'];
     experience = json['experience'];
     ownerName = json['ownerName'];
-    profileImage = json['profileImage'];
+     profileImage = json['profileImage'] != null
+        ? List<String>.from(json['profileImage'])
+        : [];
     aadhar = json['aadhar'];
     gstNumber = json['gstNumber'];
     firmName = json['firmName'];
     activity = json['activity'];
     products = json['products'];
-    sId = json['_id'];
     createdAt = json['createdAt'];
     updatedAt = json['updatedAt'];
     iV = json['__v'];
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = Map<String, dynamic>();
+    final Map<String, dynamic> data = <String, dynamic>{};
+    data['_id'] = sId;
     data['mobile'] = mobile;
     data['password'] = password;
     data['role'] = role;
@@ -262,7 +265,6 @@ class User {
     data['firmName'] = firmName;
     data['activity'] = activity;
     data['products'] = products;
-    data['_id'] = sId;
     data['createdAt'] = createdAt;
     data['updatedAt'] = updatedAt;
     data['__v'] = iV;

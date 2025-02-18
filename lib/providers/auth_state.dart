@@ -3,11 +3,8 @@ import 'dart:math';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gomed_user/model/auth.dart' ;
-import 'package:http/http.dart';
-import 'package:http/http.dart';
 import 'package:http/retry.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 import 'firebase_auth.dart';
 import 'loader.dart';
 import 'dart:convert';
@@ -122,7 +119,7 @@ Future<bool> tryAutoLogin() async {
   //     print("Error while updating profile: $e");
   //   }
   // }
-  Future<void> updateProfile(
+Future<void> updateProfile(
   String? name,
   String? email,
   String? phone,
@@ -367,12 +364,12 @@ Future<bool> tryAutoLogin() async {
          print("Messages before encoding: ${user.messages}");
          print("Data before encoding: ${user.data}");
 
-         state = user;
+           state = user;
            final userData = json.encode({
            'statusCode': user.statusCode,
             'success': user.success,
-                'messages': user.messages != null ? List<String>.from(user.messages!) : [],
-               'data': user.data?.map((data) => data.toJson()).toList(),
+            'messages': user.messages != null ? List<String>.from(user.messages!) : [],
+            'data': user.data?.map((data) => data.toJson()).toList(),
            });
 
          // Debug: Print userData before saving

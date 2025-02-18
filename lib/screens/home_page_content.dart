@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gomed_user/providers/products.dart';
+import 'package:gomed_user/providers/service.dart';
 import 'package:gomed_user/screens/products_screen.dart';
 
 class HomePageContent extends ConsumerStatefulWidget {
@@ -30,6 +31,7 @@ class _HomePageContentState extends ConsumerState<HomePageContent> {
     // Fetch products to get categories
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(productProvider.notifier).fetchProducts();
+      ref.read(serviceProvider.notifier).getSevices();
     });
   }
 

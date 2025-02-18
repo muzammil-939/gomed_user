@@ -7,5 +7,5 @@ class Bbapi {
   static const String refreshToken="$baseUrl/refresh-token";
   static const String updateProfile = "$baseUrl/user/updateProfile";
   static const String getProducts = "$baseUrl/products/user/products";
-
+  static const String getservices ="$baseUrl/services/getservices";
 }
