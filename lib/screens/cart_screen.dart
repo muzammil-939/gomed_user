@@ -17,6 +17,7 @@ class CartScreenState extends ConsumerState<CartScreen> {
   List<Data> cartProducts = [];
   List<String> selectedProductIds = []; // Track selected products
   Map<String, int> productQuantities = {}; // To track quantity for each product
+  Map<String, bool> productSelections = {}; // Store selection state for each product
 
   @override
   void initState() {
@@ -28,27 +29,74 @@ class CartScreenState extends ConsumerState<CartScreen> {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     cartProductIds = prefs.getStringList('cartItems') ?? [];
 
-    final productState = ref.watch(productProvider);
-    if (productState.data != null) {
-      cartProducts = productState.data!
-          .where((product) => cartProductIds.contains(product.productId))
-          .toList();
-    }
+  //   final productState = ref.watch(productProvider);
+  //   if (productState.data != null) {
+  //     cartProducts = productState.data!
+  //         .where((product) => cartProductIds.contains(product.productId))
+  //         .toList();
+  //   }
 
     
-    // Select all products by default
-    selectedProductIds = cartProducts.map((p) => p.productId!).toList();
-    // Set default quantity to 1 for each item
-    for (var product in cartProducts) {
-      productQuantities[product.productId!] = productQuantities[product.productId!] ?? 1;
-    }
+  // // Initialize selections and quantities
+  //   for (var product in cartProducts) {
+  //     productSelections[product.productId!] = prefs.getBool('selected_${product.productId}') ?? true; // Load saved selection or default to true
+  //     productQuantities[product.productId!] = prefs.getInt('quantity_${product.productId}') ?? 1; // Load saved quantity or default to 1
+  //   }
 
-    setState(() {});
+  //   setState(() {});
+  final productState = ref.read(productProvider);
+
+  productState.when(
+    data: (List<ProductModel> productModels) {
+      // Extract the `data` field from each `ProductModel`
+      List<Data> allProducts = productModels
+    .expand((model) => model.data != null ? model.data! as List<Data> : <Data>[])
+    .toList();
+
+
+      // Filter products that exist in the cart
+      cartProducts = allProducts
+          .where((product) => cartProductIds.contains(product.productId))
+          .toList();
+
+      // Initialize selections and quantities
+      for (var product in cartProducts) {
+        productSelections[product.productId!] = prefs.getBool('selected_${product.productId}') ?? true;
+        productQuantities[product.productId!] = prefs.getInt('quantity_${product.productId}') ?? 1;
+      }
+
+      setState(() {}); // Update UI after data is loaded
+    },
+    loading: () {
+      print("Loading products...");
+    },
+    error: (error, stackTrace) {
+      print("Error loading products: $error");
+    },
+  );
+
   }
-  // ✅ **Fixed _proceedToBuy() method inside CartScreenState**
+
+
+  Future<void> _saveSelection(String productId, bool isSelected) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('selected_$productId', isSelected);
+    setState(() {
+      productSelections[productId] = isSelected;
+    });
+  }
+
+  Future<void> _saveQuantity(String productId, int quantity) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('quantity_$productId', quantity);
+    setState(() {
+      productQuantities[productId] = quantity;
+    });
+  }
+
   void _proceedToBuy() {
     List<Data> selectedProducts = cartProducts
-        .where((product) => product.productId != null && selectedProductIds.contains(product.productId!))
+        .where((product) => product.productId != null && productSelections[product.productId!] == true)
         .toList();
 
     print("Proceeding to buy: ${selectedProducts.map((p) => p.productName).toList()}");
@@ -56,11 +104,12 @@ class CartScreenState extends ConsumerState<CartScreen> {
 
   @override
   Widget build(BuildContext context) {
-double totalMRP = cartProducts
-    .where((product) => selectedProductIds.contains(product.productId))
-    .fold(0, (sum, product) {
-      int quantity = productQuantities[product.productId!] ?? 1;
-      return sum + ((product.price ?? 0) * quantity);
+    double totalMRP = cartProducts.fold(0, (sum, product) {
+      if (productSelections[product.productId!] == true && (product.spareParts ?? true) ) { // Only calculate for selected items
+        int quantity = productQuantities[product.productId!] ?? 1;
+        return sum + ((product.price ?? 0) * quantity);
+      }
+      return sum;
     });
 
 
@@ -130,9 +179,9 @@ double totalMRP = cartProducts
   }
 
   Widget _buildCartItem(Data product) {
-    int quantity = productQuantities[product.productId!] ?? 1;
-    bool isSelected = selectedProductIds.contains(product.productId!);
-    bool isAvailable = product.spareParts ?? true;
+          int quantity = productQuantities[product.productId!] ?? 1;
+      bool isSelected = productSelections[product.productId!] ?? true;
+      bool isAvailable = product.spareParts ?? true;
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -147,16 +196,12 @@ double totalMRP = cartProducts
                 Checkbox(
                   value: isSelected,
                   onChanged: isAvailable
-                      ? (value) {
-                          setState(() {
-                            if (value!) {
-                              selectedProductIds.add(product.productId!);
-                            } else {
-                              selectedProductIds.remove(product.productId!);
-                            }
-                          });
-                        }
-                      : null,
+                       ? (value) {
+                  if (value != null) {
+                    _saveSelection(product.productId!, value);
+                  }
+                }
+              : null,
                 ),
                 Container(
                   width: 80,
@@ -187,9 +232,7 @@ double totalMRP = cartProducts
                             icon: const Icon(Icons.remove_circle_outline, color: Colors.red),
                             onPressed: () {
                               if (quantity > 1) {
-                                setState(() {
-                                  productQuantities[product.productId!] = quantity - 1;
-                                });
+              _saveQuantity(product.productId!, quantity - 1);
                               }
                             },
                           ),
@@ -197,10 +240,9 @@ double totalMRP = cartProducts
                           IconButton(
                             icon: const Icon(Icons.add_circle_outline, color: Colors.green),
                             onPressed: () {
-                              setState(() {
-                                productQuantities[product.productId!] = quantity + 1;
-                              });
-                            },
+                        _saveQuantity(product.productId!, quantity + 1);
+                          }
+                            
                           ),
                         ],
                       ),

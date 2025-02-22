@@ -64,7 +64,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '942219741281',
     projectId: 'go-med-serve',
     storageBucket: 'go-med-serve.firebasestorage.app',
-    iosBundleId: 'com.example.gomeduser.gomedUser',
+    iosBundleId: 'gomeduser.gomedUser',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
@@ -73,7 +73,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '942219741281',
     projectId: 'go-med-serve',
     storageBucket: 'go-med-serve.firebasestorage.app',
-    iosBundleId: 'com.example.gomeduser.gomedUser',
+    iosBundleId: 'gomeduser.gomedUser',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(

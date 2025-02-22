@@ -3,6 +3,7 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:gomed_user/providers/auth_state.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({super.key});
@@ -19,6 +20,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
   File? _selectedImage;
   final double maxImageSize = 5 * 1024 * 1024; // 5 MB in bytes
+  String? _profileImageUrl; // Store the URL from the model
 
   @override
   void initState() {
@@ -27,12 +29,13 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   }
 
   void _loadUserData() {
-    final userModel = ref.read(userProvider);
+    final userModel = ref.watch(userProvider);
     if (userModel.data != null && userModel.data!.isNotEmpty) {
       final user = userModel.data![0].user;
       nameController.text = user?.ownerName ?? "";
       emailController.text = user?.email ?? "";
       phoneController.text = user?.mobile ?? "";
+      _profileImageUrl = user?.profileImage?.isNotEmpty == true ? user?.profileImage![0] : null; // Get the UR
     }
   }
 
@@ -95,8 +98,10 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       radius: 50,
                       backgroundImage: _selectedImage != null
                           ? FileImage(_selectedImage!) as ImageProvider
+                          : _profileImageUrl != null // Show network image if available
+                              ? CachedNetworkImageProvider(_profileImageUrl!) // Use cached network image
                           : null,
-                      child: _selectedImage == null
+                      child: _selectedImage == null && _profileImageUrl == null
                           ? const Icon(
                               Icons.person,
                               size: 50,
@@ -132,9 +137,12 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                         _selectedImage,
                         ref,
                       );
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("Profile updated successfully!")),
-                      );
+                      setState(() {
+                        
+                      });
+                      // ScaffoldMessenger.of(context).showSnackBar(
+                      //   const SnackBar(content: Text("Profile updated successfully!")),
+                      // );
                     } catch (e) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text("Error updating profile: $e")),
@@ -144,7 +152,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   setState(() {
                     isEditing = !isEditing;
                   });
-                },
+                },  
                 style: ElevatedButton.styleFrom(
                   backgroundColor: isEditing ? Colors.green : Colors.blue,
                   padding: EdgeInsets.symmetric(

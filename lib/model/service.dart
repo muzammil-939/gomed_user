@@ -1,8 +1,13 @@
+import 'package:flutter/src/widgets/basic.dart';
+import 'package:flutter/src/widgets/framework.dart';
+
 class ServiceModel {
   int? statusCode;
   bool? success;
   List<String>? messages;
   List<Data>? data;
+
+  static var name;
 
   ServiceModel({this.statusCode, this.success, this.messages, this.data});
 
@@ -49,6 +54,8 @@ class ServiceModel {
     }
     return data;
   }
+
+  when({required Widget Function(dynamic services) data, required Center Function() loading, required Center Function(dynamic error, dynamic stackTrace) error}) {}
 }
 
 class Data {
