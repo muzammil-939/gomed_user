@@ -36,29 +36,35 @@ class ProductsScreenState extends ConsumerState<ProductsScreen> with TickerProvi
      });
 
   }
+  void _onCategorySelected(String category) {
+  setState(() {
+    _tabController?.index = _tabController!.length > 0 ? _tabController!.index : 0;
+  });
+}
+
 
    // Method to initialize the TabController
- // void _initializeTabController() {
-    //final productState = ref.watch(productProvider);
-   // List<String> categories = ["ALL"]; // Start with "ALL" tab
-    //categories.addAll(productState.data?.map((p) => p.category).whereType<String>().toSet().toList() ?? []);
-   void _initializeTabController() {
-  List<String> categories = ["ALL"]; // Start with "ALL" tab
+ void _initializeTabController() {
+    final productState = ref.watch(productProvider);
+   List<String> categories = ["ALL"]; // Start with "ALL" tab
+    categories.addAll(productState.data?.map((p) => p.category).whereType<String>().toSet().toList() ?? []);
+  //  void _initializeTabController() {
+  // List<String> categories = ["ALL"]; // Start with "ALL" tab
 
-  ref.listen<AsyncValue<List<ProductModel>>>(productProvider, (previous, next) {
-    next.whenData((products) {
-      setState(() {
-        categories.addAll(
-          products
-              .expand((product) => product.data ?? []) // Extract `data` list from each `ProductModel`
-              .map((data) => data.category) // Get `category` from `Data`
-              .whereType<String>() // Ensure only non-null categories
-              .toSet()
-              .toList(),
-        );
-      });
-    });
-  });
+  // ref.listen<AsyncValue<List<ProductModel>>>(productProvider, (previous, next) {
+  //   next.whenData((products) {
+  //     setState(() {
+  //       categories.addAll(
+  //         products
+  //             .expand((product) => product.data ?? []) // Extract `data` list from each `ProductModel`
+  //             .map((data) => data.category) // Get `category` from `Data`
+  //             .whereType<String>() // Ensure only non-null categories
+  //             .toSet()
+  //             .toList(),
+  //       );
+  //     });
+  //   });
+  // });
 
     int initialIndex = categories.indexOf(widget.selectedCategory); // Find selected category index
     _tabController = TabController(
@@ -92,22 +98,22 @@ class ProductsScreenState extends ConsumerState<ProductsScreen> with TickerProvi
   @override
   Widget build(BuildContext context) {
         
-    // final productState = ref.watch(productProvider);
-    // List<String> categories = ["ALL"]; // Start with "ALL" tab
-    // categories.addAll(productState.data?.map((p) => p.category).whereType<String>().toSet().toList() ?? []);
-     final productState = ref.watch(productProvider);
-List<String> categories = ["ALL"]; // Start with "ALL" tab
+    final productState = ref.watch(productProvider);
+    List<String> categories = ["ALL"]; // Start with "ALL" tab
+    categories.addAll(productState.data?.map((p) => p.category).whereType<String>().toSet().toList() ?? []);
+//      final productState = ref.watch(productProvider);
+// List<String> categories = ["ALL"]; // Start with "ALL" tab
 
-productState.whenData((products) {
-  final extractedCategories = products
-      .expand((product) => product.data ?? []) // Extract `data` list from each `ProductModel`
-      .map((data) => data.category) // Extract category
-      .whereType<String>() // Ensure only valid Strings
-      .toSet()
-      .toList();
+// productState.whenData((products) {
+//   final extractedCategories = products
+//       .expand((product) => product.data ?? []) // Extract `data` list from each `ProductModel`
+//       .map((data) => data.category) // Extract category
+//       .whereType<String>() // Ensure only valid Strings
+//       .toSet()
+//       .toList();
 
-  categories.addAll(extractedCategories);
-});
+//   categories.addAll(extractedCategories);
+// });
 
 
    // Ensure TabController gets updated and selects the correct tab
@@ -183,6 +189,7 @@ productState.whenData((products) {
               indicatorColor: Colors.orange,
               labelColor: Colors.orange,
               unselectedLabelColor: Colors.grey,
+              onTap: (index) => _onCategorySelected(categories[index]),
               isScrollable: true, // Ensures all tabs fit properly
               tabs: categories.map((category) => Tab(text: category)).toList(),
             ),
@@ -228,26 +235,26 @@ productState.whenData((products) {
   }
 
  Widget _buildCategoryContent(String category, VoidCallback updateCartCount ) {
-  // final productState = ref.watch(productProvider);
-  // final products = category == "ALL" 
-  //     ? productState.data ?? [] // Show all products in "ALL" tab
-  //     : productState.data?.where((p) => p.category == category).toList() ?? [];
-final productState = ref.watch(productProvider);
+  final productState = ref.watch(productProvider);
+  final products = category == "ALL" 
+      ? productState.data ?? [] // Show all products in "ALL" tab
+      : productState.data?.where((p) => p.category == category).toList() ?? [];
+// final productState = ref.watch(productProvider);
 
-final products = productState.when(
-  data: (productList) {
-    return category == "ALL"
-        ? productList.expand((product) => product.data ?? []).toList() // Extract `data` list from `ProductModel`
-        : productList.expand((product) => product.data ?? [])
-            .where((data) => data.category == category)
-            .toList();
-  },
-  loading: () => [],  // Return empty list while loading
-  error: (err, stack) => [], // Return empty list on error
-);
-  if (products.isEmpty) {
-    return const Center(child: Text("No products available."));
-  }
+// final products = productState.when(
+//   data: (productList) {
+//     return category == "ALL"
+//         ? productList.expand((product) => product.data ?? []).toList() // Extract `data` list from `ProductModel`
+//         : productList.expand((product) => product.data ?? [])
+//             .where((data) => data.category == category)
+//             .toList();
+//   },
+//   loading: () => [],  // Return empty list while loading
+//   error: (err, stack) => [], // Return empty list on error
+// );
+//   if (products.isEmpty) {
+//     return const Center(child: Text("No products available."));
+//   }
 
   return GridView.builder(
     shrinkWrap: true,

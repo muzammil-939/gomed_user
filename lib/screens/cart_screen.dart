@@ -29,51 +29,57 @@ class CartScreenState extends ConsumerState<CartScreen> {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     cartProductIds = prefs.getStringList('cartItems') ?? [];
 
-  //   final productState = ref.watch(productProvider);
-  //   if (productState.data != null) {
-  //     cartProducts = productState.data!
-  //         .where((product) => cartProductIds.contains(product.productId))
-  //         .toList();
-  //   }
-
-    
-  // // Initialize selections and quantities
-  //   for (var product in cartProducts) {
-  //     productSelections[product.productId!] = prefs.getBool('selected_${product.productId}') ?? true; // Load saved selection or default to true
-  //     productQuantities[product.productId!] = prefs.getInt('quantity_${product.productId}') ?? 1; // Load saved quantity or default to 1
-  //   }
-
-  //   setState(() {});
-  final productState = ref.read(productProvider);
-
-  productState.when(
-    data: (List<ProductModel> productModels) {
-      // Extract the `data` field from each `ProductModel`
-      List<Data> allProducts = productModels
-    .expand((model) => model.data != null ? model.data! as List<Data> : <Data>[])
-    .toList();
-
-
-      // Filter products that exist in the cart
-      cartProducts = allProducts
+    final productState = ref.watch(productProvider);
+    if (productState.data != null) {
+      cartProducts = productState.data!
           .where((product) => cartProductIds.contains(product.productId))
           .toList();
+    }
 
-      // Initialize selections and quantities
-      for (var product in cartProducts) {
-        productSelections[product.productId!] = prefs.getBool('selected_${product.productId}') ?? true;
-        productQuantities[product.productId!] = prefs.getInt('quantity_${product.productId}') ?? 1;
-      }
+    
+  // Initialize selections and quantities
+    for (var product in cartProducts) {
+      productSelections[product.productId!] = prefs.getBool('selected_${product.productId}') ?? true; // Load saved selection or default to true
+      productQuantities[product.productId!] = prefs.getInt('quantity_${product.productId}') ?? 1; // Load saved quantity or default to 1
+    }
+selectedProductIds = productSelections.entries
+    .where((entry) => entry.value == true)
+    .map((entry) => entry.key)
+    .toList();
 
-      setState(() {}); // Update UI after data is loaded
-    },
-    loading: () {
-      print("Loading products...");
-    },
-    error: (error, stackTrace) {
-      print("Error loading products: $error");
-    },
-  );
+setState(() {});
+
+    setState(() {});
+  // final productState = ref.read(productProvider);
+
+  // productState.when(
+  //   data: (List<ProductModel> productModels) {
+  //     // Extract the `data` field from each `ProductModel`
+  //     List<Data> allProducts = productModels
+  //   .expand((model) => model.data != null ? model.data! as List<Data> : <Data>[])
+  //   .toList();
+
+
+  //     // Filter products that exist in the cart
+  //     cartProducts = allProducts
+  //         .where((product) => cartProductIds.contains(product.productId))
+  //         .toList();
+
+  //     // Initialize selections and quantities
+  //     for (var product in cartProducts) {
+  //       productSelections[product.productId!] = prefs.getBool('selected_${product.productId}') ?? true;
+  //       productQuantities[product.productId!] = prefs.getInt('quantity_${product.productId}') ?? 1;
+  //     }
+
+  //     setState(() {}); // Update UI after data is loaded
+  //   },
+  //   loading: () {
+  //     print("Loading products...");
+  //   },
+  //   error: (error, stackTrace) {
+  //     print("Error loading products: $error");
+  //   },
+  // );
 
   }
 
@@ -83,6 +89,14 @@ class CartScreenState extends ConsumerState<CartScreen> {
     await prefs.setBool('selected_$productId', isSelected);
     setState(() {
       productSelections[productId] = isSelected;
+      // Update the selectedProductIds list
+    if (isSelected) {
+      if (!selectedProductIds.contains(productId)) {
+        selectedProductIds.add(productId);
+      }
+    } else {
+      selectedProductIds.remove(productId);
+    }
     });
   }
 

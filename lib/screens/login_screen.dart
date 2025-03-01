@@ -24,6 +24,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool isLoading = false; // To control loading state
   int countdown = 0; // Countdown timer for OTP
   late Timer _timer; // Timer object
+  String lastPhoneNumber = ""; // Store the last sent phone number
 
   @override
   void dispose() {
@@ -89,6 +90,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         _buildTextField(
                           hintText: 'Enter your phone number',
                           controller: phoneController,
+                          isPhoneField: true, // Mark it as a phone field
                         ),
                         const SizedBox(height: 20),
                         _buildLabel('OTP'),
@@ -99,6 +101,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               child: _buildTextField(
                                 hintText: 'Enter OTP',
                                 controller: otpController,
+                                
                               ),
                             ),
                             const SizedBox(width: 10),
@@ -108,7 +111,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                // final loader = ref.watch(loadingProvider);
 
                                 return ElevatedButton(
-                                  onPressed: countdown > 0
+                                  onPressed: (countdown > 0 ) 
                                       ? null
                                       : () async {
                                           String phoneNumber = phoneController.text.trim();
@@ -117,6 +120,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                               RegExp(r'^[6-9]\d{9}$').hasMatch(phoneNumber.substring(3));
 
                                           if (isValid) {
+                                             // Save the phone number when sending OTP
+                                                  setState(() {
+                                                     lastPhoneNumber = phoneNumber;
+                                                        });
                                             // Attempt to send the OTP
                                             await phoneAuthNotifier.verifyPhoneNumber(phoneNumber, ref);
                                             startOtpCountdown(); // Start the countdown
@@ -138,7 +145,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                      child: //isLoading
                                       //? //const CircularProgressIndicator(color: Colors.white):
                                       Text(
-                                          countdown > 0 ? '$countdown sec' : 'Send OTP',
+                                          countdown > 0 ? '$countdown sec'  : (lastPhoneNumber == phoneController.text.trim() ? 'Resend OTP' : 'Send OTP'),
                                           style: const TextStyle(color: Colors.white, fontSize: 16),
                                         ),
                                 );
@@ -151,22 +158,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
-                            onPressed: () async {
+                            onPressed: isLoading 
+                            ? null 
+                            : () async {
                               String smsCode = otpController.text.trim();
                               if (smsCode.isNotEmpty) {
-                                try {
+                                
                                    setState(() {
                                       isLoading = true; // Start loading
                                    });
                                   // Verify the OTP
+                                  try {
                                   await ref.read(userProvider.notifier).signInWithPhoneNumber(smsCode, ref);
-
-
+                                     // ✅ Stop the Timer
+                                     if (_timer.isActive) {
+                                            _timer.cancel();
+                                      }
+                          
                                   // Show success message
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(content: Text("OTP Verified Successfully!")),
                                   );
-
+                          
                                   // Navigate to HomePage
                                   // Navigator.pushReplacement(
                                   //   context,
@@ -188,26 +201,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               }
                             },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF3F9548),
+                              backgroundColor: isLoading? Colors.grey : const Color(0xFF3F9548),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8),
                               ),
                             ),
-                            child: Stack(
-                               alignment: Alignment.center,
-                               children: [
-                                 const Text(
-                                   'Verify',
+                            child: isLoading
+                                   ? const SizedBox(
+                                     height: 24,
+                                  width: 24,
+                                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
+                               )
+                                   : const Text(
+                                  'Verify',
                                    style: TextStyle(
-                                     color: Colors.white,
-                                     fontSize: 16,
-                                     fontWeight: FontWeight.bold,
-                                   ),
-                                 ),
-                                 if (isLoading) 
-                                   const CircularProgressIndicator(color: Colors.white),
-                               ],
-                            ),
+                                    color: Colors.white,
+                                  fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                      ),
+                                      ),
                           ),
                         ),
                       ],
@@ -238,6 +250,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget _buildTextField({
     required String hintText,
     required TextEditingController controller,
+    bool isPhoneField = false,
   }) {
     return TextField(
       controller: controller,
@@ -252,11 +265,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       ),
       keyboardType: TextInputType.number,
       onChanged: (value) {
+        if (isPhoneField) {
         if (!value.startsWith("+91")) {
           phoneController.text = "+91";
           phoneController.selection = TextSelection.fromPosition(
             TextPosition(offset: phoneController.text.length),
           );
+        }
+         // Reset OTP state if the user enters a new phone number
+          if (value.trim() != lastPhoneNumber) {
+            setState(() {
+              countdown = 0; // Reset timer
+            });
+          }
         }
       },
     );

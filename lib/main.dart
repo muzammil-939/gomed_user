@@ -20,12 +20,21 @@ import 'package:gomed_user/screens/settings_screen.dart';
 
 import 'firebase_options.dart';
 import 'screens/home_page_content.dart';
+import 'package:flutter/services.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
 );
+
+  // Restrict orientation to portrait mode
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+
   runApp(
     const ProviderScope(
       // Wrap your app with ProviderScope
@@ -73,10 +82,10 @@ class MyApp extends StatelessWidget {
                 if (snapshot.hasData && snapshot.data == true) {
                   print('Auto-login successful. Navigating to HomePage.');
                   return const HomePage();
-                } else {
+                 } else { 
                   print('Auto-login failed. Navigating to LoginScreen.');
                   return const LoginScreen();
-                }
+                 }
             },
            );
           },

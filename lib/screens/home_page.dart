@@ -20,12 +20,24 @@ class HomePage extends ConsumerStatefulWidget {
 class _HomePageState extends ConsumerState<HomePage> {
   int _selectedIndex = 0;
   String selectedCategory = "ALL";
+  final List<String> categories = ["ALL", "Category 1", "Category 2", "Category 3"];
 
-  void _onCategorySelected(int index) {
-    setState(() {
-      _selectedIndex = 2; // Navigate to products screen
-    });
-  }
+  // void _onCategorySelected(int index) {
+  //   setState(() {
+  //     _selectedIndex = 2; // Navigate to products screen
+  //   });
+  // }
+   void _onCategorySelected(int index) {
+  String selectedCategory = categories[index]; // ✅ Convert index to category
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => ProductsScreen(selectedCategory: selectedCategory),
+    ),
+  );
+}
+
+
 
   void _onItemTapped(int index) {
     setState(() {

@@ -4,6 +4,7 @@ import 'package:gomed_user/model/service.dart';
 import 'package:gomed_user/providers/products.dart';
 import 'package:gomed_user/providers/getservice.dart';
 import 'package:gomed_user/screens/products_screen.dart';
+import 'package:gomed_user/screens/home_page.dart';
 
 class HomePageContent extends ConsumerStatefulWidget {
   final Function(int) onCategorySelected;
@@ -31,10 +32,11 @@ class _HomePageContentState extends ConsumerState<HomePageContent> {
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(productProvider.notifier).fetchProducts();
-      //ref.read(serviceProvider.notifier).getSevices();
-      ref.read(serviceProvider.notifier).getServices();
+      ref.read(serviceProvider.notifier).getSevices();
+      //ref.read(serviceProvider.notifier).getServices();
     });
   }
+  
 
   @override
   void dispose() {
@@ -51,25 +53,27 @@ class _HomePageContentState extends ConsumerState<HomePageContent> {
     final productState = ref.watch(productProvider);
     final serviceState = ref.watch(serviceProvider); // Watch service provider
 
-    // List<String> categories = productState.data
-    //         ?.map((product) => product.category)
-    //         .whereType<String>()
-    //         .toSet()
-    //         .toList() ??
-    //     [];
-    List<String> categories = [];
+    List<String> categories = productState.data
+            ?.map((product) => product.category)
+            .whereType<String>()
+            .toSet()
+            .toList() ??
+        [];
+    //List<String> categories = [];
 
-productState.when(
-  data: (products) {
-    categories = products
-        .map((product) => product.data![0].category)
-        .whereType<String>()
-        .toSet()
-        .toList();
-  },
-  loading: () => [],
-  error: (err, stack) => [],
-);
+// productState.when(
+//   data: (products) {
+//     categories = products
+//         .where((product) => product.data != null && product.data!.isNotEmpty) // Ensure data is not null or empty
+//         .map((product) => product.data!.first.category ?? 'Unknown') // Safely access the first category
+//         .whereType<String>()
+//         .toSet()
+//         .toList();
+//   },
+//   loading: () => [],
+//   error: (err, stack) => [],
+// );
+
 
 
     return SingleChildScrollView(
@@ -95,24 +99,24 @@ productState.when(
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: screenHeight * 0.01),
-            // Build featured services based on provider data
-            // serviceState.data != null && serviceState.data!.isNotEmpty
-            //     ? _buildFeaturedServices(screenWidth, screenHeight, serviceState.data!)
-            //     : const Center(child: CircularProgressIndicator()), // Show loading indicator while fetching
-           serviceState.when(
-  data: (services) {
-    // Extract all Data objects from the list of ServiceModel
-    List<Data> allServices = services.expand<Data>((model) => model.data ?? []).toList();
+           // Build featured services based on provider data
+            serviceState.data != null && serviceState.data!.isNotEmpty
+                ? _buildFeaturedServices(screenWidth, screenHeight, serviceState.data!)
+                : const Center(child: CircularProgressIndicator()), // Show loading indicator while fetching
+//            serviceState.when(
+//   data: (services) {
+//     List<Data> allServices = services.expand<Data>((model) => model.data ?? []).toList(); // Not needed anymore
 
-    if (allServices.isNotEmpty) {
-      return _buildFeaturedServices(screenWidth, screenHeight, allServices);
-    } else {
-      return const Center(child: Text("No services available"));
-    }
-  },
-  loading: () => const Center(child: CircularProgressIndicator()),
-  error: (err, stack) => Center(child: Text("Error: $err")),
-           )
+//     if (allServices.isNotEmpty) {
+//       return _buildFeaturedServices(screenWidth, screenHeight, allServices);
+//     } else {
+//       return const Center(child: Text("No services available"));
+//     }
+//   },
+//   loading: () => const Center(child: CircularProgressIndicator()),
+//   error: (err, stack) => Center(child: Text("Error: $err")),
+// )
+
 
           ],
         ),
@@ -146,14 +150,15 @@ productState.when(
         itemBuilder: (context, index) {
           return GestureDetector(
             onTap: () {
-               
-              Navigator.push(
-                context,
-                MaterialPageRoute( 
-                  builder: (context) =>
-                      ProductsScreen(selectedCategory: categories[index]),
-                ),
-              );
+                widget.onCategorySelected(index);
+
+              // Navigator.push(
+              //   context,
+              //   MaterialPageRoute( 
+              //     builder: (context) =>
+              //         ProductsScreen(selectedCategory: categories[index]),
+              //   ),
+              // );
               
             },
             child: Container(
