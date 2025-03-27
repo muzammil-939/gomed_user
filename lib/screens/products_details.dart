@@ -90,19 +90,18 @@ class _ProductsDetailsState extends State<ProductsDetails> {
         children: [
           
            Container(
-            height: 300, // Adjust as needed
-            color: Colors.grey[300], // Placeholder
-            //child: Center(child: Text('Product Image ${_currentImageIndex + 1}')),// Display current image number
-           child: widget.product.productImage != null
-                   ? Image.network(
-                     "http://97.74.93.26:3000/${widget.product.productImage}",
-                    fit: BoxFit.cover, // Or BoxFit.contain, depending on your needs
-                    errorBuilder: (context, error, stackTrace) => const Icon(Icons.image, size: 120),
-           )
-           : const Center(child: Text('No IMAGE'),)
-          ),
+          height: 300, // Adjust as needed
+          color: Colors.grey[300], // Placeholder
+          child: widget.product.productImages != null && widget.product.productImages!.isNotEmpty
+              ? Image.network(
+                  widget.product.productImages![_currentImageIndex], // Use _currentImageIndex
+                  fit: BoxFit.cover, // Or BoxFit.contain, depending on your needs
+                  errorBuilder: (context, error, stackTrace) => const Icon(Icons.image, size: 120),
+                )
+              : const Center(child: Text('No IMAGE')),
+        ),
           // Horizontal Product Thumbnails
-          _buildHorizontalProductImages(widget.product.productImage), // Pass the image URL
+          _buildHorizontalProductImages(widget.product.productImages), // Pass the image URL
 
           Padding(
             padding: const EdgeInsets.all(16.0),
@@ -338,12 +337,16 @@ Widget _buildQuestionAnswer(String question, String answer) {
 }
 
     // Helper function for horizontally scrollable product images
-  Widget _buildHorizontalProductImages(String? imageUrl) {
+  Widget _buildHorizontalProductImages(List<String>? imageUrls) {
+    if (imageUrls == null || imageUrls.isEmpty) {
+      return const Center(child: Text("No images available"));
+    }
+
     return Container(
       height: 100, // Reduced height for thumbnails
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        itemCount: 5, // Replace with your actual count
+        itemCount: imageUrls.length, // Use actual count of images
         itemBuilder: (context, index) {
           return GestureDetector( // Wrap with GestureDetector
             onTap: () {
@@ -362,14 +365,11 @@ Widget _buildQuestionAnswer(String question, String answer) {
                 color: Colors.grey[300], // Placeholder for product image
               ),
              // child: Center(child: Text('Thumbnail ${index + 1}')), // Placeholder
-             child: imageUrl != null
-                  ? Image.network(
-                      "http://97.74.93.26:3000/$imageUrl",
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => const Icon(Icons.image, size: 50),
-                    )
-                  : const Center(child: Text('No Image')),
-            ),
+              child: Image.network(
+                imageUrls[index], // Access each image correctly
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => const Icon(Icons.image, size: 50),
+              ),            ),
           );
         },
       ),

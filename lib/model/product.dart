@@ -62,7 +62,7 @@ class Data {
   double? price;
   String? category;
   bool? spareParts;
-  String? productImage;
+  List<String>? productImages;
 
   Data({
     this.productId,
@@ -73,7 +73,7 @@ class Data {
     this.price,
     this.category,
     this.spareParts,
-    this.productImage,
+    this.productImages,
   });
 
   factory Data.initial() {
@@ -86,7 +86,7 @@ class Data {
       price: 0.0,
       category: '',
       spareParts: false,
-      productImage: '',
+      productImages: [],
     );
   }
 
@@ -99,7 +99,7 @@ class Data {
     double? price,
     String? category,
     bool? spareParts,
-    String? productImage,
+    List<String>? productImages,
   }) {
     return Data(
       productId: productId ?? this.productId,
@@ -110,7 +110,7 @@ class Data {
       price: price ?? this.price,
       category: category ?? this.category,
       spareParts: spareParts ?? this.spareParts,
-      productImage: productImage ?? this.productImage,
+      productImages: productImages ?? this.productImages,
     );
   }
 
@@ -124,7 +124,7 @@ Data.fromJson(Map<String, dynamic> json) {
   category = json['category'];
    // Convert "true"/"false" (String) to actual boolean
   spareParts = json['spareParts'] == "true" ? true : false;
-  productImage = json['productImage'];
+   productImages = json['productImages'].cast<String>();
 }
 
 
@@ -138,7 +138,7 @@ Data.fromJson(Map<String, dynamic> json) {
     data['price'] = price;
     data['category'] = category;
     data['spareParts'] = spareParts;
-    data['productImage'] = productImage;
+    data['productImages'] = productImages;
     return data;
   }
 }

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gomed_user/model/product.dart';
 import 'package:gomed_user/providers/products.dart';
 import 'package:gomed_user/screens/cart_screen.dart';
+import 'package:gomed_user/screens/home_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import "package:gomed_user/screens/products_details.dart";
 
@@ -19,6 +20,9 @@ class ProductsScreenState extends ConsumerState<ProductsScreen> with TickerProvi
   final ScrollController _scrollController = ScrollController();
   final FocusNode _searchFocusNode = FocusNode();
    TabController? _tabController;
+   final TextEditingController _searchController = TextEditingController();
+   String _searchQuery = "";
+
    int cartItemCount = 0; // To track cart count
 
 
@@ -99,8 +103,17 @@ class ProductsScreenState extends ConsumerState<ProductsScreen> with TickerProvi
   Widget build(BuildContext context) {
         
     final productState = ref.watch(productProvider);
-    List<String> categories = ["ALL"]; // Start with "ALL" tab
-    categories.addAll(productState.data?.map((p) => p.category).whereType<String>().toSet().toList() ?? []);
+    
+   List<String> categories = ["ALL"];
+    categories.addAll(productState.data
+    ?.map((p) => p.category)
+    .whereType<String>()
+    .where((c) => c.toLowerCase().contains(_searchQuery)) // 🔍 Filter categories
+    .toSet()
+    .toList() ?? []);
+
+
+
 //      final productState = ref.watch(productProvider);
 // List<String> categories = ["ALL"]; // Start with "ALL" tab
 
@@ -133,7 +146,9 @@ class ProductsScreenState extends ConsumerState<ProductsScreen> with TickerProvi
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () {},
+          onPressed: () {
+            Navigator.push(context, MaterialPageRoute(builder: (context) => const HomePage()));
+          },
         ),
         title: _buildSearchBar(),
          actions: [
@@ -220,12 +235,28 @@ class ProductsScreenState extends ConsumerState<ProductsScreen> with TickerProvi
           const Icon(Icons.search, color: Colors.grey),
           Expanded(
             child: TextField(
+              controller: _searchController,
               focusNode: _searchFocusNode,
               decoration: const InputDecoration(
-                hintText: "Search Products",
+                hintText: "Search Products & Categories",
                 border: InputBorder.none,
               ),
+              onChanged: (value) {
+              setState(() {
+                _searchQuery = value.toLowerCase();
+              });
+            },
             ),
+          ),
+           if (_searchQuery.isNotEmpty) 
+          IconButton(
+            icon: const Icon(Icons.close, color: Colors.grey),
+            onPressed: () {
+              setState(() {
+                _searchController.clear();
+                _searchQuery = "";
+              });
+            },
           ),
           const Icon(Icons.mic, color: Colors.grey),
           const Icon(Icons.image, color: Colors.grey),
@@ -236,9 +267,19 @@ class ProductsScreenState extends ConsumerState<ProductsScreen> with TickerProvi
 
  Widget _buildCategoryContent(String category, VoidCallback updateCartCount ) {
   final productState = ref.watch(productProvider);
-  final products = category == "ALL" 
-      ? productState.data ?? [] // Show all products in "ALL" tab
-      : productState.data?.where((p) => p.category == category).toList() ?? [];
+   final allProducts = productState.data ?? [];
+
+  // Apply category filter
+  final filteredProducts = category == "ALL"
+      ? allProducts
+      : allProducts.where((p) => p.category == category).toList();
+
+  // Apply search filter
+  final searchedProducts = filteredProducts.where((p) =>
+      p.productName!.toLowerCase().contains(_searchQuery) ||
+      p.category!.toLowerCase().contains(_searchQuery)).toList();
+
+
 // final productState = ref.watch(productProvider);
 
 // final products = productState.when(
@@ -266,8 +307,8 @@ class ProductsScreenState extends ConsumerState<ProductsScreen> with TickerProvi
       crossAxisSpacing: 10,
       mainAxisSpacing: 10,
     ),
-    itemCount: products.length,
-    itemBuilder: (context, index) => _buildProductCard(products[index], updateCartCount),
+    itemCount: searchedProducts.length,
+    itemBuilder: (context, index) => _buildProductCard(searchedProducts[index], updateCartCount),
   );
 }
 
@@ -309,15 +350,16 @@ Widget _buildProductCard(Data product, VoidCallback updateCartCount) {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   ClipRRect(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
-                    child: Image.network(
-                      "http://97.74.93.26:3000/${product.productImage}",
-                      height: screenWidth * 0.3,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => const Icon(Icons.image, size: 120),
-                    ),
-                  ),
+                           borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
+                             child: Image.network(
+                             product.productImages!.isNotEmpty ? product.productImages!.first : '', // Get the first image from the list
+                              height: screenWidth * 0.3,
+                            width: double.infinity,
+                             fit: BoxFit.cover,
+                                 errorBuilder: (context, error, stackTrace) => const Icon(Icons.image, size: 120),
+                            ),
+                           ),
+
                   Padding(
                     padding: EdgeInsets.all(screenWidth * 0.02),
                     child: Column(

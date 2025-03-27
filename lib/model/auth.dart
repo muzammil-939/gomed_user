@@ -34,9 +34,7 @@ class UserModel {
   UserModel.fromJson(Map<String, dynamic> json) {
     statusCode = json['statusCode'];
     success = json['success'];
-    messages = json['messages'] != null
-        ? List<String>.from(json['messages'])
-        : null;
+     messages = json['messages'].cast<String>();
     if (json['data'] != null) {
       data = <Data>[];
       json['data'].forEach((v) {
@@ -104,6 +102,7 @@ class Data {
 }
 
 class User {
+  Location? location;
   String? sId;
   String? mobile;
   String? password;
@@ -126,6 +125,7 @@ class User {
   int? iV;
 
   User({
+    this.location,
     this.sId,
     this.mobile,
     this.password,
@@ -151,6 +151,7 @@ class User {
   // Initial method
   factory User.initial() {
     return User(
+      location : Location.initial(),
        sId: '',
       mobile: '',
       password: '',
@@ -176,6 +177,7 @@ class User {
 
   // CopyWith method
   User copyWith({
+     Location? location,
      String? sId,
     String? mobile,
     String? password,
@@ -198,6 +200,7 @@ class User {
     int? iV,
   }) {
     return User(
+      location: location ?? this.location,
       sId: sId ?? this.sId,
       mobile: mobile ?? this.mobile,
       password: password ?? this.password,
@@ -222,6 +225,7 @@ class User {
   }
 
   User.fromJson(Map<String, dynamic> json) {
+    location = json['location'] != null ? Location.fromJson(json['location']) : null;
     sId = json['_id'];
     mobile = json['mobile'];
     password = json['password'];
@@ -248,6 +252,7 @@ class User {
 
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = <String, dynamic>{};
+    data['location'] = location;
     data['_id'] = sId;
     data['mobile'] = mobile;
     data['password'] = password;
@@ -271,3 +276,36 @@ class User {
     return data;
   }
 }
+class Location {
+  String? latitude;
+  String? longitude;
+
+  Location({this.latitude, this.longitude});
+
+  Location.initial()
+      : latitude = '',
+        longitude = '';
+
+  Location copyWith({
+    String? latitude,
+    String? longitude,
+  }) {
+    return Location(
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+    );
+  }
+
+  Location.fromJson(Map<String, dynamic> json) {
+    latitude = json['latitude'];
+    longitude = json['longitude'];
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'latitude': latitude,
+      'longitude': longitude,
+    };
+  }
+}
+

@@ -4,6 +4,9 @@ import 'dart:io';
 import 'package:gomed_user/providers/auth_state.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:location/location.dart' as loc ;
+import 'package:geocoding/geocoding.dart' ; // Import geocoding package
 
 class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({super.key});
@@ -13,20 +16,36 @@ class ProfilePage extends ConsumerStatefulWidget {
 }
 
 class _ProfilePageState extends ConsumerState<ProfilePage> {
+  LatLng _initialPosition = const LatLng(37.7749, -122.4194); // Default to San Francisco
+
   bool isEditing = false;
   final TextEditingController nameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController phoneController = TextEditingController();
+  final TextEditingController addressController = TextEditingController();
 
   File? _selectedImage;
-  final double maxImageSize = 5 * 1024 * 1024; // 5 MB in bytes
-  String? _profileImageUrl; // Store the URL from the model
+  String? _profileImageUrl;
+  final double maxImageSize = 5 * 1024 * 1024;
 
+  late GoogleMapController _mapController;
+  LatLng _currentPosition = const LatLng(37.7749, -122.4194);
+  Set<Marker> _markers = {};
+  String _currentAddress = "Fetching location..."; // Holds user's address
+  double? lat;
+  double? lng;
+  
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _loadUserData();
   }
+  @override
+void initState() {
+  super.initState();
+  getCurrentLocation();  // Keep location fetch here, it's fine
+}
+
 
   void _loadUserData() {
     final userModel = ref.watch(userProvider);
@@ -36,12 +55,12 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         nameController.text = user?.ownerName ?? "";
         emailController.text = user?.email ?? "";
         phoneController.text = user?.mobile ?? "";
+        addressController.text = user?.address ?? "";
         _profileImageUrl = user?.profileImage?.isNotEmpty == true ? user?.profileImage![0] : null;
       });
     }
   }
-
-  Future<void> _pickImage(ImageSource source) async {
+    Future<void> _pickImage(ImageSource source) async {
     final ImagePicker picker = ImagePicker();
     final XFile? image = await picker.pickImage(source: source);
 
@@ -58,7 +77,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       }
     }
   }
-
   void _showSizeError() {
     showDialog(
       context: context,
@@ -75,6 +93,72 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     );
   }
 
+Future<void> getCurrentLocation() async {
+  loc.Location location = loc.Location();
+
+  bool serviceEnabled;
+  loc.PermissionStatus permissionGranted;
+  loc.LocationData locationData;
+
+  serviceEnabled = await location.serviceEnabled();
+  if (!serviceEnabled) {
+    serviceEnabled = await location.requestService();
+    if (!serviceEnabled) {
+      return;
+    }
+  }
+
+  permissionGranted = await location.hasPermission();
+  if (permissionGranted == loc.PermissionStatus.denied) {
+    permissionGranted = await location.requestPermission();
+    if (permissionGranted != loc.PermissionStatus.granted) {
+      return;
+    }
+  }
+
+  // Force high accuracy mode for precise location
+  await location.changeSettings(accuracy: loc.LocationAccuracy.high);
+
+  locationData = await location.getLocation();
+   lat = locationData.latitude;
+   lng = locationData.longitude;
+
+  // Print latitude and longitude to console
+  print("Latitude: $lat, Longitude: $lng");
+
+  try {
+    List<Placemark> placemarks = await placemarkFromCoordinates(lat!, lng!);
+    Placemark place = placemarks.first;
+
+    String address =
+        "${place.street}, ${place.locality}, ${place.administrativeArea}, ${place.country}";
+
+    setState(() {
+      print("Updated lat: $lat, lng: $lng");  // Debugging print inside setState
+      _currentPosition = LatLng(lat!, lng!);
+      _currentAddress = address;
+      _markers.clear();
+      _markers.add(Marker(
+        markerId: const MarkerId("currentLocation"),
+        position: LatLng(lat!, lng!),
+        infoWindow: InfoWindow(title: "Your Location", snippet: address),
+      ));
+    });
+
+    // Move camera to exact location
+    _mapController.animateCamera(
+      CameraUpdate.newCameraPosition(
+        CameraPosition(target: LatLng(lat!, lng!), zoom: 18), // Zoom in closer
+      ),
+    );
+
+  } catch (e) {
+    print("Error getting address: $e");
+  }
+}
+
+
+
   @override
   Widget build(BuildContext context) {
     double screenWidth = MediaQuery.of(context).size.width;
@@ -83,7 +167,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Profile'),
-        backgroundColor: const Color(0xFF1BA4CA), // Custom background color
+        backgroundColor: const Color(0xFF1BA4CA),
       ),
       backgroundColor: Colors.grey[100],
       body: SingleChildScrollView(
@@ -101,14 +185,10 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       backgroundImage: _selectedImage != null
                           ? FileImage(_selectedImage!) as ImageProvider
                           : _profileImageUrl != null
-                              ? CachedNetworkImageProvider(_profileImageUrl!) // Use cached network image
+                              ? CachedNetworkImageProvider(_profileImageUrl!)
                               : null,
                       child: _selectedImage == null && _profileImageUrl == null
-                          ? const Icon(
-                              Icons.person,
-                              size: 50,
-                              color: Colors.grey,
-                            )
+                          ? const Icon(Icons.person, size: 50, color: Colors.grey)
                           : null,
                     ),
                   ),
@@ -126,6 +206,38 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
             _buildProfileField("Email", emailController, isEditing),
             SizedBox(height: screenHeight * 0.02),
             _buildProfileField("Phone", phoneController, isEditing),
+            SizedBox(height: screenHeight * 0.02),
+            _buildProfileField("Address", addressController, isEditing),
+            SizedBox(height: screenHeight * 0.04),
+
+            // Show Address
+            Text(
+              "Location:",
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            Text(
+              _currentAddress,
+              style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+            ),
+            SizedBox(height: screenHeight * 0.02),
+
+            // Google Maps Widget
+            SizedBox(
+              height: 300,
+              child: GoogleMap(
+                onMapCreated: (GoogleMapController controller) {
+                  _mapController = controller;
+                },
+                initialCameraPosition: CameraPosition(
+                  target: _currentPosition,
+                  zoom: 14,
+                ),
+                markers: _markers,
+                myLocationEnabled: true,
+                myLocationButtonEnabled: true,
+              ),
+            ),
+
             SizedBox(height: screenHeight * 0.04),
             Center(
               child: ElevatedButton(
@@ -136,6 +248,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                         nameController.text,
                         emailController.text,
                         phoneController.text,
+                        addressController.text,
+                        lat,
+                        lng,
                         _selectedImage,
                         ref,
                       );
@@ -153,8 +268,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: isEditing ? Colors.green : Colors.blue,
                   padding: EdgeInsets.symmetric(
-                    vertical: MediaQuery.of(context).size.height * 0.015,
-                    horizontal: MediaQuery.of(context).size.width * 0.3,
+                    vertical: screenHeight * 0.015,
+                    horizontal: screenWidth * 0.3,
                   ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
@@ -162,11 +277,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 ),
                 child: Text(
                   isEditing ? 'Save' : 'Edit Profile',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),
             ),
@@ -180,10 +291,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
+        Text(label, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         const SizedBox(height: 5),
         TextField(
           controller: controller,

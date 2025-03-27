@@ -17,6 +17,9 @@ class HomePageContent extends ConsumerStatefulWidget {
 class _HomePageContentState extends ConsumerState<HomePageContent> {
   final ScrollController _scrollController = ScrollController();
   final FocusNode _searchFocusNode = FocusNode();
+   final TextEditingController _searchController = TextEditingController(); 
+
+   String _searchQuery = "";
 
   @override
   void initState() {
@@ -42,6 +45,7 @@ class _HomePageContentState extends ConsumerState<HomePageContent> {
   void dispose() {
     _scrollController.dispose();
     _searchFocusNode.dispose();
+     _searchController.dispose();
     super.dispose();
   }
 
@@ -53,10 +57,24 @@ class _HomePageContentState extends ConsumerState<HomePageContent> {
     final productState = ref.watch(productProvider);
     final serviceState = ref.watch(serviceProvider); // Watch service provider
 
+     // Get categories from products
     List<String> categories = productState.data
             ?.map((product) => product.category)
             .whereType<String>()
             .toSet()
+            .toList() ??
+        [];
+
+    // Apply search filtering
+    List<String> filteredCategories = categories
+        .where((category) =>
+            category.toLowerCase().contains(_searchQuery.toLowerCase()))
+        .toList();    
+
+    // **Filter services based on search query**
+    List<Data> filteredServices = serviceState.data
+            ?.where((service) =>
+                service.name!.toLowerCase().contains(_searchQuery.toLowerCase()))
             .toList() ??
         [];
     //List<String> categories = [];
@@ -85,13 +103,13 @@ class _HomePageContentState extends ConsumerState<HomePageContent> {
           children: [
             _buildSearchField(),
             SizedBox(height: screenHeight * 0.02),
-            if (categories.isNotEmpty) ...[
+            if (filteredCategories.isNotEmpty) ...[
               const Text(
                 'Categories',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               SizedBox(height: screenHeight * 0.01),
-              _buildCategoryList(categories),
+              _buildCategoryList(filteredCategories),
               SizedBox(height: screenHeight * 0.02),
             ],
             const Text(
@@ -100,9 +118,9 @@ class _HomePageContentState extends ConsumerState<HomePageContent> {
             ),
             SizedBox(height: screenHeight * 0.01),
            // Build featured services based on provider data
-            serviceState.data != null && serviceState.data!.isNotEmpty
-                ? _buildFeaturedServices(screenWidth, screenHeight, serviceState.data!)
-                : const Center(child: CircularProgressIndicator()), // Show loading indicator while fetching
+            filteredServices.isNotEmpty
+                ? _buildFeaturedServices(screenWidth, screenHeight, filteredServices)
+                : const Center(child: Text("No services available")), // Show loading indicator while fetching
 //            serviceState.when(
 //   data: (services) {
 //     List<Data> allServices = services.expand<Data>((model) => model.data ?? []).toList(); // Not needed anymore
@@ -126,6 +144,7 @@ class _HomePageContentState extends ConsumerState<HomePageContent> {
 
   Widget _buildSearchField() {
     return TextField(
+      controller: _searchController,
       focusNode: _searchFocusNode,
       decoration: InputDecoration(
         hintText: 'Search for services',
@@ -137,6 +156,12 @@ class _HomePageContentState extends ConsumerState<HomePageContent> {
         fillColor: const Color.fromARGB(255, 213, 221, 231),
         suffixIcon: const Icon(Icons.search),
       ),
+       onChanged: (query) {
+        setState(() {
+          _searchQuery = query;
+        });
+      },
+      
     );
   }
 
@@ -150,15 +175,15 @@ class _HomePageContentState extends ConsumerState<HomePageContent> {
         itemBuilder: (context, index) {
           return GestureDetector(
             onTap: () {
-                widget.onCategorySelected(index);
+               // widget.onCategorySelected(index);
 
-              // Navigator.push(
-              //   context,
-              //   MaterialPageRoute( 
-              //     builder: (context) =>
-              //         ProductsScreen(selectedCategory: categories[index]),
-              //   ),
-              // );
+              Navigator.push(
+                context,
+                MaterialPageRoute( 
+                  builder: (context) =>
+                      ProductsScreen(selectedCategory: categories[index]),
+                ),
+              );
               
             },
             child: Container(

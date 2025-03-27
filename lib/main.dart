@@ -9,7 +9,7 @@ import 'package:gomed_user/screens/booking_screen.dart';
 import 'package:gomed_user/screens/bookingstagepage.dart';
 import 'package:gomed_user/screens/home_page.dart';
 import 'package:gomed_user/screens/login_screen.dart'; // Import Riverpod
-import 'package:gomed_user/screens/ordertracking.dart';
+import 'package:gomed_user/screens/product_ordertracking.dart';
 import 'package:gomed_user/screens/payment.dart';
 import 'package:gomed_user/screens/products_screen.dart';
 import 'package:gomed_user/screens/profile_screen.dart';
@@ -93,7 +93,7 @@ class MyApp extends StatelessWidget {
       },
       
         "booking_screen":(context)=>const BookingsPage(),
-        "bookingstagepage":(context)=>const BookingStagePage(),
+       // "bookingstagepage":(context)=>const BookingStagePage(),
         //"home_page_content":(context)=>const HomePageContent(),
         "home_page":(context)=>const HomePage(),
          "login_screen":(context)=>const LoginScreen(),
@@ -102,7 +102,7 @@ class MyApp extends StatelessWidget {
         "settings_screen":(context)=>const SettingsPage(),
         "services":(context)=>const ServicesPage(),
         //"payment":(context)=>const PaymentPage()
-        "service_details":(context)=>const ServiceDetailsPage(),
+        // "service_details":(context)=>const ServiceDetailsPage(),
          //"ordertracking":(context)=>const OrderTrackingPage(),
     });
   }

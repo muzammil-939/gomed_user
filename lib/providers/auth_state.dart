@@ -10,6 +10,7 @@ import 'loader.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:gomed_user/utils/gomed_api.dart';
+import 'package:http_parser/http_parser.dart'; // Import this for MediaType
 
 class PhoneAuthNotifier extends StateNotifier<UserModel> {
   final Ref ref;
@@ -123,6 +124,9 @@ Future<void> updateProfile(
   String? name,
   String? email,
   String? phone,
+  String? address,
+  double? lat,
+  double? lng,
   File? selectedImage,
   WidgetRef ref,
 ) async {
@@ -136,8 +140,8 @@ Future<void> updateProfile(
  // final userId = prefs.getString('userId');
  // final token = prefs.getString('firebaseToken');
 
-  print('name--$name, email--$email, mobile--$phone, profileImage--${selectedImage?.path}');
-
+  print('name--$name, email--$email, mobile--$phone, profileImage--${selectedImage?.path},address--$address,lat--$lat,lng--$lng');
+print('user id--$userId, token--$token');
   if (userId == null || token == null) {
     print('User ID or Firebase token is missing.');
     return;
@@ -172,19 +176,27 @@ Future<void> updateProfile(
       ..fields['ownerName'] = name ?? ''
       ..fields['email'] = email ?? ''
       ..fields['mobile'] = phone ?? ''
+      ..fields['address'] = address ?? ''
+      ..fields['longitude'] = (lng ?? 0.0).toString() 
+      ..fields['latitude'] = (lat ?? 0.0).toString()
       ..fields['role'] = 'user' ;
+      
 
-    if (selectedImage != null) {
-      if (await selectedImage.exists()) {
-        request.files.add(await http.MultipartFile.fromPath(
-          'profileImage',
-          selectedImage.path,
-        ));
-      } else {
-        print("Profile image file does not exist: ${selectedImage.path}");
-        throw Exception("Profile image file not found");
-      }
-    }
+if (selectedImage != null) {
+  if (await selectedImage.exists()) {
+    final fileExtension = selectedImage.path.split('.').last.toLowerCase();
+    final contentType = MediaType('image', fileExtension); // Determine content type dynamically
+
+    request.files.add(await http.MultipartFile.fromPath(
+      'profileImage',
+      selectedImage.path,
+      contentType: contentType,
+    ));
+  } else {
+    print("Profile image file does not exist: ${selectedImage.path}");
+    throw Exception("Profile image file not found");
+  }
+}
 
     print("Request Fields: ${request.fields}");
     print("Request Headers: ${request.headers}");
@@ -199,6 +211,7 @@ Future<void> updateProfile(
       print("Profile updated successfully.");
       
       var userDetails = json.decode(response.body);
+      print('updated details---$userDetails');
         UserModel user = UserModel.fromJson(userDetails);
         print("Response: ${response.body}");
 
@@ -397,6 +410,8 @@ Future<void> updateProfile(
 
     return uniqueUid;
   }
+
+  
   Future<void> deleteAccount(String?userId, String?token) async {
   final String apiUrl = "${Bbapi.deleteAccount}/$userId"; // Replace with your API URL for delete account
   final loadingState = ref.read(loadingProvider.notifier);
@@ -459,14 +474,27 @@ Future<String> restoreAccessToken() async {
     final prefs = await SharedPreferences.getInstance();
 
     try {
-      var response = await http.patch(
-        Uri.parse(url),
-        headers: {
-          'Authorization': state.data![0].accessToken!,
-          'Content-Type': 'application/json; charset=UTF-8'
-        },
-        body: json.encode({"refresh_token": state.data![0].accessToken}),
-      );
+        // Retrieve stored user data
+    String? storedUserData = prefs.getString('userData');
+    if (storedUserData == null) {
+      throw Exception("No stored user data found.");
+    }
+
+    UserModel user = UserModel.fromJson(json.decode(storedUserData));
+    String? currentRefreshToken = user.data?.isNotEmpty == true ? user.data![0].refreshToken : null;
+ print('older access token${user.data![0].accessToken}');
+    if (currentRefreshToken == null || currentRefreshToken.isEmpty) {
+      throw Exception("No valid refresh token found.");
+    }
+
+     var response = await http.post(
+      Uri.parse(url),
+      headers: {
+        'Authorization': 'Bearer $currentRefreshToken',
+        'Content-Type': 'application/json; charset=UTF-8',
+      },
+      body: json.encode({"refresh_token": currentRefreshToken}),
+    );
 
       var userDetails = json.decode(response.body);
       print('restore token response $userDetails');
@@ -521,7 +549,11 @@ Future<String> restoreAccessToken() async {
 
             // Debug: Print user data after saving
             print("User Data saved in SharedPreferences: ${prefs.getString('userData')}");
+            print("updated accesstoken ${user.data![0].accessToken}");
+
+            return newAccessToken; // Return the new access token
           } else {
+
             // Handle the case where there is no existing user data in SharedPreferences
             print("No user data found in SharedPreferences.");
           }
@@ -539,7 +571,7 @@ Future<String> restoreAccessToken() async {
         print('Stack Trace: ${e.stackTrace}');
       }
     }
-    return state.data![0].accessToken!;
+    return ''; // Return null in case of any error
   }
 }
 

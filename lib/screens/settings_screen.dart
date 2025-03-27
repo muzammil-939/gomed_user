@@ -25,10 +25,10 @@ class SettingsPageState extends ConsumerState<SettingsPage>{
       appBar: AppBar(
         backgroundColor: Colors.grey[100],
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+        // leading: IconButton(
+        //   icon: const Icon(Icons.arrow_back, color: Colors.black),
+        //   onPressed: () => Navigator.of(context).pop(),
+        // ),
         title: const Text(
           'Settings',
           style: TextStyle(color: Colors.black),

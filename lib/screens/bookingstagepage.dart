@@ -1,19 +1,107 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:gomed_user/providers/add_services.dart';
+import 'package:gomed_user/providers/auth_state.dart';
+import 'package:gomed_user/providers/servicebooking_provider.dart';
 import 'package:gomed_user/screens/payment.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class BookingStagePage extends StatefulWidget {
-  const BookingStagePage({super.key});
+class BookingStagePage extends ConsumerStatefulWidget {
+    final String serviceId; 
+
+  const BookingStagePage({super.key,required this.serviceId});
 
   @override
   _BookingStagePageState createState() => _BookingStagePageState();
+  
+  
 }
 
-class _BookingStagePageState extends State<BookingStagePage> {
+class _BookingStagePageState extends ConsumerState<BookingStagePage> {
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _landmarkController = TextEditingController();
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
+ // final String serviceId = widget.serviceId; // ✅ Get serviceId
+
+
+
+
+    @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+Future<void> _loadUserData() async {
+  final userState = ref.read(userProvider);
+  
+  if (userState.data != null && userState.data!.isNotEmpty) {
+    final user = userState.data!.first.user!;
+    _addressController.text = user.address ?? 'No Address';
+
+    // Fetch landmark (human-readable address from lat/lng)
+    if (user.location != null && user.location!.latitude!.isNotEmpty) {
+      try {
+        double latitude = double.parse(user.location!.latitude!);
+        double longitude = double.parse(user.location!.longitude!);
+
+        List<Placemark> placemarks = await placemarkFromCoordinates(latitude, longitude);
+        if (placemarks.isNotEmpty) {
+          Placemark place = placemarks.first;
+          setState(() {
+            _landmarkController.text =
+           "${place.street ?? 'Unknown Street'}, ${place.locality ?? 'Unknown City'}, ${place.country ?? 'Unknown Country'}";
+           print('location details....${place.street}, ${place.locality}, ${place.country}');
+          });
+        }
+      } catch (e) {
+        print("Error fetching landmark: $e");
+      }
+    }
+  }
+}
+
+  Future<void> _changeAddress() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? newAddress = await _showAddressDialog();
+    if (newAddress != null && newAddress.isNotEmpty) {
+      await prefs.setString('user_address', newAddress);
+      setState(() {
+        _addressController.text = newAddress;
+      });
+    }
+  }
+
+  Future<String?> _showAddressDialog() async {
+    TextEditingController addressInput = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Change Address'),
+          content: TextField(
+            controller: addressInput,
+            decoration: InputDecoration(hintText: 'Enter new address'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, null),
+              child: Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, addressInput.text),
+              child: Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   // Function to pick date
   Future<void> _selectDate(BuildContext context) async {
@@ -85,6 +173,16 @@ class _BookingStagePageState extends State<BookingStagePage> {
                 ),
                 filled: true,
                 fillColor: const Color.fromARGB(255, 213, 221, 231),
+              ),
+            ),
+             SizedBox(height: screenHeight * 0.01),
+
+            // Change Address Button
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: _changeAddress,
+                child: Text('Change Address'),
               ),
             ),
             SizedBox(height: screenHeight * 0.02),
@@ -183,20 +281,67 @@ class _BookingStagePageState extends State<BookingStagePage> {
             // Proceed to Payment Button
             Center(
               child: ElevatedButton(
-                onPressed: () {
+                onPressed: () async {
                   if (_selectedDate != null &&
                       _selectedTime != null &&
                       _addressController.text.isNotEmpty) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => PaymentPage(
-                          address: _addressController.text,
-                          selectedDate: _selectedDate!,
-                          selectedTime: _selectedTime!,
-                        ),
-                      ),
-                    );
+                       final userState = ref.read(userProvider);
+
+                         if (userState.data != null && userState.data!.isNotEmpty) {
+          final user = userState.data!.first.user;
+          final userId = user?.sId; // Assuming `sId` is the user ID
+          final address = _addressController.text;
+          
+          // Retrieve latitude & longitude if available
+          String location = '';
+          if (user?.location != null) {
+            location = '${user!.location!.latitude},${user.location!.longitude}';
+          }
+        
+
+        if (widget.serviceId.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Please select at least one service')),
+          );
+          return;
+        }
+
+            // Format Date and Time
+      String formattedDate = DateFormat('yyyy-MM-dd').format(_selectedDate!);
+      String formattedTime = _selectedTime!.format(context);
+
+          try {
+            await ref.read(getserviceProvider.notifier).addServices(
+              userId: userId,
+              serviceId: [widget. serviceId],
+              location: location,
+              address: address,
+              date: formattedDate,
+              time: formattedTime,
+              
+            );
+            
+
+            // Show success message
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Booking successful!')),
+            ); 
+                    // Navigator.push(
+                    //   context,
+                    //   MaterialPageRoute(
+                    //     builder: (context) => PaymentPage(
+                    //       address: _addressController.text,
+                    //       selectedDate: _selectedDate!,
+                    //       selectedTime: _selectedTime!,
+                    //     ),
+                    //   ),
+                    // );
+                     } catch (error) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Failed to book service: $error')),
+            );
+          }
+        }
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
@@ -217,7 +362,7 @@ class _BookingStagePageState extends State<BookingStagePage> {
                   ),
                 ),
                 child: Text(
-                  'Proceed to Payment',
+                  'Booking Services',
                   style: TextStyle(
                     color: Colors.black,
                     fontSize: screenWidth * 0.045,

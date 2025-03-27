@@ -1,9 +1,18 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:gomed_user/providers/addbooking_provider.dart';
+import 'package:gomed_user/providers/auth_state.dart';
+import 'package:gomed_user/providers/getproduct_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:gomed_user/providers/products.dart';
 import 'package:gomed_user/model/product.dart';
 import "package:gomed_user/screens/products_screen.dart";
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:google_places_flutter/google_places_flutter.dart';
+
 
 class CartScreen extends ConsumerStatefulWidget {
   const CartScreen({super.key});
@@ -18,24 +27,142 @@ class CartScreenState extends ConsumerState<CartScreen> {
   List<String> selectedProductIds = []; // Track selected products
   Map<String, int> productQuantities = {}; // To track quantity for each product
   Map<String, bool> productSelections = {}; // Store selection state for each product
-
+   String? add1 ;
+  String? add2 ;
+    double? latitude;
+  double? longitude;
+  String? userid;
+  String locationAddress = "Fetching location...";
   @override
   void initState() {
     super.initState();
     _loadCartItems();
+    _loadAddress();
+  }
+ 
+  Future<void> _loadAddress() async {
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+
+  // Fetch user data from API provider
+   var userState = ref.watch(userProvider);
+
+  // ignore: unnecessary_null_comparison
+  if ( userState!= null) {
+    final user = userState.data![0].user; // Assuming user data is fetched
+    setState(() {
+      userid = userState.data![0].user!.sId;
+      add1 = user!.address ?? prefs.getString('add1') ?? "No Address";
+       latitude = double.tryParse(user.location?.latitude ?? "");
+        longitude = double.tryParse(user.location?.longitude ?? "");
+    });
+    print('deatils.....$add1,$latitude,$longitude,$userid');
+    
+
+     if (latitude != null && longitude != null) {
+        _getAddressFromCoordinates(latitude!, longitude!);
+      }
+  } else {
+    setState(() {
+      add1 = prefs.getString('add1') ?? "No Address";
+    });
+  }
+}
+ Future<void> _getAddressFromCoordinates(double lat, double lng) async {
+    try {
+      List<Placemark> placemarks = await placemarkFromCoordinates(lat, lng);
+      if (placemarks.isNotEmpty) {
+        Placemark place = placemarks.first;
+        setState(() {
+          locationAddress = "${place.street}, ${place.locality}, ${place.country}";
+          print('location details....${place.street}, ${place.locality}, ${place.country}');
+        });
+      }
+    } catch (e) {
+      setState(() {
+        locationAddress = "Could not fetch location";
+      });
+    }
   }
 
+
+ 
+Future<void> _changeAddress(BuildContext context) async {
+  TextEditingController add1Controller = TextEditingController(text: add1);
+  TextEditingController add2Controller = TextEditingController(text: add2);
+
+  await showDialog(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: Text("Change Address"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: add1Controller,
+              decoration: InputDecoration(labelText: "Address Line 1"),
+            ),
+            SizedBox(height: 10),
+            GooglePlaceAutoCompleteTextField(
+              textEditingController: add2Controller,
+              googleAPIKey: "AIzaSyCMADwyS3eoxJ5dQ_iFiWcDBA_tJwoZosw", // Replace with your API Key
+              inputDecoration: InputDecoration(labelText: "Search Location"),
+              debounceTime: 400,
+              isLatLngRequired: true,
+              getPlaceDetailWithLatLng: (prediction) async {
+                print("Latitude: ${prediction.lat}, Longitude: ${prediction.lng}");
+
+                SharedPreferences prefs = await SharedPreferences.getInstance();
+                await prefs.setString('latitude', prediction.lat.toString());
+                await prefs.setString('longitude', prediction.lng.toString());
+
+                setState(() {
+                  latitude = double.tryParse(prediction.lat.toString());
+                  longitude = double.tryParse(prediction.lng.toString());
+                  add2 = prediction.description;
+                });
+
+                _getAddressFromCoordinates(latitude!, longitude!);
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text("Close"),
+          ),
+          TextButton(
+            onPressed: () async {
+              SharedPreferences prefs = await SharedPreferences.getInstance();
+              await prefs.setString('add1', add1Controller.text.trim());
+              await prefs.setString('add2', add2Controller.text.trim());
+
+              setState(() {
+                add1 = add1Controller.text.trim();
+                add2 = add2Controller.text.trim();
+              });
+
+              Navigator.pop(context);
+            },
+            child: Text("Save"),
+          ),
+        ],
+      );
+    },
+  );
+}
   Future<void> _loadCartItems() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     cartProductIds = prefs.getStringList('cartItems') ?? [];
-
+print('cart product ids---${cartProductIds.length}');
     final productState = ref.watch(productProvider);
     if (productState.data != null) {
       cartProducts = productState.data!
           .where((product) => cartProductIds.contains(product.productId))
           .toList();
     }
-
+print('product data--${cartProducts.length}');
     
   // Initialize selections and quantities
     for (var product in cartProducts) {
@@ -49,7 +176,7 @@ selectedProductIds = productSelections.entries
 
 setState(() {});
 
-    setState(() {});
+   // setState(() {});
   // final productState = ref.read(productProvider);
 
   // productState.when(
@@ -108,13 +235,87 @@ setState(() {});
     });
   }
 
-  void _proceedToBuy() {
+Future<void> _proceedToBuy() async {
+  try {
     List<Data> selectedProducts = cartProducts
-        .where((product) => product.productId != null && productSelections[product.productId!] == true)
+        .where((product) => product.productId != null && 
+                            productSelections[product.productId!] == true &&
+                            (product.spareParts ?? true))
         .toList();
 
-    print("Proceeding to buy: ${selectedProducts.map((p) => p.productName).toList()}");
+    if (selectedProducts.isEmpty) {
+      print("❌ No products selected for booking.");
+      return;
+    }
+
+    // Count booked products
+    int bookedCount = selectedProducts.length;
+
+    final prefs = await SharedPreferences.getInstance();
+    String? userDataString = prefs.getString('userData');
+
+    if (userDataString == null || userDataString.isEmpty) {
+      throw Exception("User data is missing.");
+    }
+
+    List<String> productIds = selectedProducts.map((p) => p.productId.toString()).toList();
+
+    double? lat = latitude ?? double.tryParse(prefs.getString('latitude') ?? '');
+    double? lng = longitude ?? double.tryParse(prefs.getString('longitude') ?? '');
+
+    if (lat == null || lng == null) {
+      throw Exception("Location data is missing.");
+    }
+
+    String location = "$lat, $lng";
+
+    print("📌 Booking Details:");
+    print("👤 User ID: $userid");
+    print("📦 Product IDs: $productIds");
+    print("📍 Location: $location");
+    print("🏠 Address: $add1");
+    print("✅ Products Booked: $bookedCount");
+
+    await ref.read(getproductProvider.notifier).createBooking(
+      userId: userid,
+      productIds: productIds,
+      location: location,
+      address: add1,
+    );
+
+    print("✅ Booking successful!");
+
+    // Remove booked items from cart
+    cartProductIds.removeWhere((id) => selectedProductIds.contains(id));
+    await prefs.setStringList('cartItems', cartProductIds);
+
+    selectedProductIds.clear(); // Clear selected items
+
+    setState(() {});
+
+    // ✅ Show success message with count
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("$bookedCount products booked successfully!"),
+        backgroundColor: Colors.green,
+      ),
+    );
+
+    // ✅ Navigate to ProductsScreen if cart is empty
+    if (cartProductIds.isEmpty) {
+      Navigator.pushReplacement(
+        context, 
+        MaterialPageRoute(builder: (_) => ProductsScreen(selectedCategory: 'ALL'))
+      );
+    } else {
+      setState(() {}); // Update UI if cart still has items
+    }
+  } catch (error) {
+    print("❌ Failed to proceed to booking: $error");
   }
+}
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -130,7 +331,7 @@ setState(() {});
     double discountMRP = 300; // Static discount
     double platformFee = 20;  // Static platform fee
     double totalAmount = totalMRP - discountMRP + platformFee;
-
+ 
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color(0xFF1BA4CA),
@@ -146,7 +347,52 @@ setState(() {});
               )
             : Column(
                 children: [
-                  _buildSavingsBanner(),
+                 // _buildSavingsBanner(),
+                   Padding(
+            padding: EdgeInsets.all(10),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                RichText(
+                  text: TextSpan(
+                    style: TextStyle(fontSize: 16, color: Colors.black54),
+                    children: [
+                      TextSpan(text: "Deliver To: "),
+                      TextSpan(
+                        text: add1!.isNotEmpty ? add1 : "No Address",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => _changeAddress(context),
+                  child: Text("Change", style: TextStyle(color: Colors.blue)),
+                ),
+                 ],
+            ),
+          ),
+          if (latitude != null && longitude != null)
+              Padding(
+                padding: EdgeInsets.all(10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Your Location:",
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      locationAddress,
+                      style: TextStyle(fontSize: 14, color: Colors.black87),
+                    ),
+                  ],
+                ),
+              ),
                   Expanded(
                     child: SingleChildScrollView(
                       child: Column(
@@ -160,12 +406,20 @@ setState(() {});
                     platformFee: platformFee,
                     totalAmount: totalAmount,
                   ),
+                    /// 🔹 Selected Product Count
+              Padding(
+                padding: const EdgeInsets.all(10),
+                child: Text(
+                  "Selected Products: ${selectedProductIds.length}",
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black),
+                ),
+              ),
                   Padding(
                     padding: const EdgeInsets.all(10),
                     child: ElevatedButton(
                       onPressed: selectedProductIds.isNotEmpty
-                          ? () {
-                              _proceedToBuy();
+                          ? () async {
+                             await _proceedToBuy();
                             }
                           : null, // Disable if no item is selected
                       style: ElevatedButton.styleFrom(
@@ -181,16 +435,16 @@ setState(() {});
     );
   }
 
-  Widget _buildSavingsBanner() {
-    return Container(
-      padding: const EdgeInsets.all(10),
-      color: Colors.green[100],
-      child: const Text(
-        "You're Saving 33% On This Order",
-        style: TextStyle(fontSize: 16, color: Colors.green, fontWeight: FontWeight.bold),
-      ),
-    );
-  }
+  // Widget _buildSavingsBanner() {
+  //   return Container(
+  //     padding: const EdgeInsets.all(10),
+  //     color: Colors.green[100],
+  //     // child: const Text(
+  //     //   "You're Saving 33% On This Order",
+  //     //   style: TextStyle(fontSize: 16, color: Colors.green, fontWeight: FontWeight.bold),
+  //     // ),
+  //   );
+  // }
 
   Widget _buildCartItem(Data product) {
           int quantity = productQuantities[product.productId!] ?? 1;
@@ -221,9 +475,9 @@ setState(() {});
                   width: 80,
                   height: 80,
                   decoration: BoxDecoration(
-                    image: product.productImage != null
+                    image: product.productImages != null
                         ? DecorationImage(
-                            image: NetworkImage("http://97.74.93.26:3000/${product.productImage}"),
+                            image: NetworkImage("${product.productImages?.first}"),
                             fit: BoxFit.cover)
                         : null,
                     color: Colors.grey[300],
@@ -368,7 +622,6 @@ class PriceDetails extends StatelessWidget {
       Text(value, style: TextStyle(fontWeight: isBold ? FontWeight.bold : FontWeight.normal)),
     ]);
   }
-   
 }
 
 
