@@ -51,24 +51,7 @@ class ProductsScreenState extends ConsumerState<ProductsScreen> with TickerProvi
  void _initializeTabController() {
     final productState = ref.watch(productProvider);
    List<String> categories = ["ALL"]; // Start with "ALL" tab
-    categories.addAll(productState.data?.map((p) => p.category).whereType<String>().toSet().toList() ?? []);
-  //  void _initializeTabController() {
-  // List<String> categories = ["ALL"]; // Start with "ALL" tab
-
-  // ref.listen<AsyncValue<List<ProductModel>>>(productProvider, (previous, next) {
-  //   next.whenData((products) {
-  //     setState(() {
-  //       categories.addAll(
-  //         products
-  //             .expand((product) => product.data ?? []) // Extract `data` list from each `ProductModel`
-  //             .map((data) => data.category) // Get `category` from `Data`
-  //             .whereType<String>() // Ensure only non-null categories
-  //             .toSet()
-  //             .toList(),
-  //       );
-  //     });
-  //   });
-  // });
+    categories.addAll(productState.data?.map((p) => p.categoryName).whereType<String>().toSet().toList() ?? []);
 
     int initialIndex = categories.indexOf(widget.selectedCategory); // Find selected category index
     _tabController = TabController(
@@ -106,7 +89,7 @@ class ProductsScreenState extends ConsumerState<ProductsScreen> with TickerProvi
     
    List<String> categories = ["ALL"];
     categories.addAll(productState.data
-    ?.map((p) => p.category)
+    ?.map((p) => p.categoryName)
     .whereType<String>()
     .where((c) => c.toLowerCase().contains(_searchQuery)) // 🔍 Filter categories
     .toSet()
@@ -270,32 +253,21 @@ class ProductsScreenState extends ConsumerState<ProductsScreen> with TickerProvi
    final allProducts = productState.data ?? [];
 
   // Apply category filter
-  final filteredProducts = category == "ALL"
-      ? allProducts
-      : allProducts.where((p) => p.category == category).toList();
+  // final filteredProducts = category == "ALL"
+  //     ? allProducts
+  //     : allProducts.where((p) => p.categoryName == category).toList();
 
-  // Apply search filter
-  final searchedProducts = filteredProducts.where((p) =>
-      p.productName!.toLowerCase().contains(_searchQuery) ||
-      p.category!.toLowerCase().contains(_searchQuery)).toList();
+        final filteredProducts = allProducts.where((p) {
+        final matchesCategory = category == "ALL" || p.categoryName == category;
+        final isTopLevel = p.parentId == null; // Only show top-level products
+        return matchesCategory && isTopLevel;
+            }).toList();
 
 
-// final productState = ref.watch(productProvider);
-
-// final products = productState.when(
-//   data: (productList) {
-//     return category == "ALL"
-//         ? productList.expand((product) => product.data ?? []).toList() // Extract `data` list from `ProductModel`
-//         : productList.expand((product) => product.data ?? [])
-//             .where((data) => data.category == category)
-//             .toList();
-//   },
-//   loading: () => [],  // Return empty list while loading
-//   error: (err, stack) => [], // Return empty list on error
-// );
-//   if (products.isEmpty) {
-//     return const Center(child: Text("No products available."));
-//   }
+        final searchedProducts = filteredProducts.where((p) =>
+      (p.productName != null && p.productName!.toLowerCase().contains(_searchQuery)) ||
+      (p.categoryName != null && p.categoryName!.toLowerCase().contains(_searchQuery))
+    ).toList();
 
   return GridView.builder(
     shrinkWrap: true,
@@ -323,14 +295,21 @@ Widget _buildProductCard(Data product, VoidCallback updateCartCount) {
         builder: (context, constraints) {
           final screenWidth = MediaQuery.of(context).size.width;
 
-          String truncatedName = product.productName != null && product.productName!.length > 10
-              ? "${product.productName!.substring(0, 10)}..."
-              : product.productName ?? '';
+          // String truncatedName = product.productName != null && product.productName!.length > 10
+          //     ? "${product.productName!.substring(0, 10)}..."
+          //     : product.productName ?? '';
+          String name = product.productName ?? '';
+          String truncatedName = name.length > 10 ? "${name.substring(0, 10)}..." : name;
 
-          String truncatedDescription = product.productDescription != null && product.productDescription!.length > 20
-              ? "${product.productDescription!.substring(0, 20)}..."
-              : product.productDescription ?? '';
-            
+
+          // String truncatedDescription = product.productDescription != null && product.productDescription!.length > 20
+          //     ? "${product.productDescription!.substring(0, 20)}..."
+          //     : product.productDescription ?? '';
+
+          
+           String descriptionName = product.productDescription  ?? '';
+            String truncatedDescription = descriptionName.length > 10 ? "${descriptionName.substring(0, 10)}..." : descriptionName;
+
             
           return GestureDetector(
                 onTap: () {
@@ -352,7 +331,11 @@ Widget _buildProductCard(Data product, VoidCallback updateCartCount) {
                   ClipRRect(
                            borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
                              child: Image.network(
-                             product.productImages!.isNotEmpty ? product.productImages!.first : '', // Get the first image from the list
+                            (product.productImages != null && product.productImages!.isNotEmpty)
+                            ? product.productImages!.first
+                             : '',
+
+                            // product.productImages!.isNotEmpty ? product.productImages!.first : '', // Get the first image from the list
                               height: screenWidth * 0.3,
                             width: double.infinity,
                              fit: BoxFit.cover,
@@ -366,8 +349,9 @@ Widget _buildProductCard(Data product, VoidCallback updateCartCount) {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(truncatedName, style: const TextStyle(fontWeight: FontWeight.bold)),
-                        Text(truncatedDescription, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.grey)),
+                       Text(truncatedDescription, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.grey)),
                         Text("₹${product.price}", style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                        Text("${product.quantity}", style: const TextStyle(color: Color.fromARGB(255, 175, 76, 99), fontWeight: FontWeight.bold)),
                       ],
                     ),
                   ),
@@ -409,66 +393,65 @@ Widget _buildProductCard(Data product, VoidCallback updateCartCount) {
 }
 
 // Fetch cart items from SharedPreferences
-Future<List<String>> _getCartItems() async {
-  SharedPreferences prefs = await SharedPreferences.getInstance();
-  return prefs.getStringList('cartItems') ?? [];
-}
+      Future<List<String>> _getCartItems() async {
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        return prefs.getStringList('cartItems') ?? [];
+      }
 
-// Function to store product ID in SharedPreferences
-Future<void> _addToCart(String productId) async {
-  SharedPreferences prefs = await SharedPreferences.getInstance();
-  List<String> cartItems = prefs.getStringList('cartItems') ?? [];
+      // Function to store product ID in SharedPreferences
+      Future<void> _addToCart(String productId) async {
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        List<String> cartItems = prefs.getStringList('cartItems') ?? [];
 
-  if (!cartItems.contains(productId)) {
-    cartItems.add(productId);
-    await prefs.setStringList('cartItems', cartItems);
-      setState(() {
-        cartItemCount = cartItems.length;
-      });
-       // ✅ Update cart count immediately
-    //await loadCartItemCount();
-     if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              "Item added to cart",
-              style: TextStyle(color: Colors.white),
+        if (!cartItems.contains(productId)) {
+          cartItems.add(productId);
+          await prefs.setStringList('cartItems', cartItems);
+            setState(() {
+              cartItemCount = cartItems.length;
+            });
+            // ✅ Update cart count immediately
+          //await loadCartItemCount();
+          if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    "Item added to cart",
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  duration:  Duration(seconds: 2),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            }
+          }
+          
+        }
+
+
+
+        Widget _buildFilterButtonsRow() {
+          return SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _buildFilterButton('Top Rated'),
+                _buildFilterButton('Customer Ratings'),
+                _buildFilterButton('F Assured'),
+              ],
             ),
-            duration:  Duration(seconds: 2),
-            backgroundColor: Colors.green,
+          );
+        }
+
+      Widget _buildFilterButton(String text) {
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 8.0),
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          decoration: BoxDecoration(
+            color: Colors.grey[200],
+            borderRadius: BorderRadius.circular(16.0),
+            border: Border.all(color: Colors.grey[300]!),
           ),
+          child: Text(text, style: const TextStyle(color: Colors.black)),
         );
       }
-     }
-   // Show Scaffold Messenger
-     
-    }
-
-
-
-  Widget _buildFilterButtonsRow() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          _buildFilterButton('Top Rated'),
-          _buildFilterButton('Customer Ratings'),
-          _buildFilterButton('F Assured'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFilterButton(String text) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8.0),
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      decoration: BoxDecoration(
-        color: Colors.grey[200],
-        borderRadius: BorderRadius.circular(16.0),
-        border: Border.all(color: Colors.grey[300]!),
-      ),
-      child: Text(text, style: const TextStyle(color: Colors.black)),
-    );
-  }
 }

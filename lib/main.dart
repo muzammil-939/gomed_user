@@ -21,6 +21,7 @@ import 'package:gomed_user/screens/settings_screen.dart';
 import 'firebase_options.dart';
 import 'screens/home_page_content.dart';
 import 'package:flutter/services.dart';
+import 'dart:math';
 
 
 void main() async {
@@ -35,12 +36,16 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
 
-  runApp(
+  runApp( 
     const ProviderScope(
       // Wrap your app with ProviderScope
       child: MyApp(),
     ),
   );
+}
+String generateOtp() {
+  final random = Random();
+  return (100000 + random.nextInt(900000)).toString(); // 6-digit
 }
 
 class MyApp extends StatelessWidget {
@@ -92,7 +97,7 @@ class MyApp extends StatelessWidget {
          );
       },
       
-        "booking_screen":(context)=>const BookingsPage(),
+       "booking_screen":(context)=>const BookingsPage(),
        // "bookingstagepage":(context)=>const BookingStagePage(),
         //"home_page_content":(context)=>const HomePageContent(),
         "home_page":(context)=>const HomePage(),

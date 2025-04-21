@@ -1,21 +1,34 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:gomed_user/model/product.dart';
-import 'package:gomed_user/model/service.dart';
-import 'package:gomed_user/providers/products.dart';
+import 'package:gomed_user/providers/product_services.dart';
 import 'package:gomed_user/providers/getservice.dart';
 import 'package:gomed_user/screens/mybookedservices.dart';
 import 'package:gomed_user/screens/service_details.dart';
-import 'package:gomed_user/model/product.dart' as product_model ;
 import 'package:gomed_user/model/service.dart' as service_model ;
+import 'package:gomed_user/model/getservices.dart' as product_model ;
 
-class ServicesPage extends ConsumerWidget {
+class ServicesPage extends ConsumerStatefulWidget {
+  
   const ServicesPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final productState = ref.watch(productProvider);
+  ServicesPageState createState() => ServicesPageState();
+}
+
+class ServicesPageState extends ConsumerState<ServicesPage>  {
+
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      ref.watch(productserviceprovider.notifier).getproductSevices();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context,) {
+    final productState = ref.watch(productserviceprovider);
     final serviceState = ref.watch(serviceProvider);
 
     return Scaffold(
@@ -53,6 +66,9 @@ class ServicesPage extends ConsumerWidget {
                   final productServices = serviceState.data!
                       .where((service) => service.productIds!.contains(product.productId))
                       .toList();
+                    // final productServices = serviceState.data!
+                    //  .where((service) => (service.productIds ?? []).contains(product.productId))
+                    //   .toList();
 
                   return ProductCard(product: product, services: productServices);
                 },
@@ -78,12 +94,18 @@ class ProductCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Text(
+            //   product.productName!,
+            //   style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            // ),
             Text(
-              product.productName!,
+              product.productName ?? 'Unnamed Product',
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
+
             const SizedBox(height: 10),
-            ...services.map((service) => ServiceItem(service: service)).toList(),
+            ...services.map((service) => ServiceItem(service: service, productId: product.productId ?? '')).toList(),
+
           ],
         ),
       ), 
@@ -93,8 +115,9 @@ class ProductCard extends StatelessWidget {
 
 class ServiceItem extends StatelessWidget {
   final service_model.Data service;
+  final String productId; 
 
-  const ServiceItem({super.key, required this.service});
+  const ServiceItem({super.key, required this.service, required this.productId});
 
   @override
   Widget build(BuildContext context) {
@@ -102,13 +125,15 @@ class ServiceItem extends StatelessWidget {
       color: Colors.grey[200],
       margin: const EdgeInsets.symmetric(vertical: 5),
       child: ListTile(
-        title: Text(service.name!, style: const TextStyle(fontWeight: FontWeight.bold)),
+        //title: Text(service.name!, style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(service.name ?? 'Unnamed Service', style: const TextStyle(fontWeight: FontWeight.bold)),
+
         subtitle: Text("Price: ₹${service.price}"),
         trailing: IconButton(
           icon: const Icon(Icons.arrow_forward, color: Colors.blue),
           onPressed: () => Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => ServiceDetailsPage(service: service,)),
+            MaterialPageRoute(builder: (context) => ServiceDetailsPage(service: service, productId: productId , )),
           ),
         ),
       ),

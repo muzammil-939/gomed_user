@@ -120,7 +120,7 @@ class GetproductProvider extends StateNotifier<GetproductModel> {
 
 Future<void> createBooking({
     required String? userId,
-    required List<String> productIds,
+    required List<Map<String, dynamic>> productIds,
     required String location,
     required String? address,
   }) async {
@@ -171,7 +171,7 @@ print('inside create booking....$userId,$productIds,$location,$address');
         "location": location,
         "address": address ?? '',
         "status": "pending",
-        "productIds": productIds,
+        "products": productIds,
       };
 
        // Send POST request with JSON body

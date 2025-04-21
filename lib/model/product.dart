@@ -43,9 +43,9 @@ class ProductModel {
 
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = {};
-    data['statusCode'] = statusCode;
-    data['success'] = success;
-    data['messages'] = messages;
+    data['statusCode'] = this.statusCode;
+    data['success'] = this.success;
+    data['messages'] = this.messages;
     if (this.data != null) {
       data['data'] = this.data!.map((v) => v.toJson()).toList();
     }
@@ -54,91 +54,110 @@ class ProductModel {
 }
 
 class Data {
+  String? distributorId;
   String? productId;
-  String? firmName;
-  String? ownerName;
+  String? parentId;
   String? productName;
   String? productDescription;
-  double? price;
-  String? category;
-  bool? spareParts;
+  String? categoryId;
+  String? categoryName;
+  int? price;
+  int? quantity;
   List<String>? productImages;
+  String? adminApproval;
+  bool? activated;
 
   Data({
+    this.distributorId,
     this.productId,
-    this.firmName,
-    this.ownerName,
+    this.parentId,
     this.productName,
     this.productDescription,
+    this.categoryId,
+    this.categoryName,
     this.price,
-    this.category,
-    this.spareParts,
+    this.quantity,
     this.productImages,
+    this.adminApproval,
+    this.activated,
   });
 
   factory Data.initial() {
     return Data(
+      distributorId: '',
       productId: '',
-      firmName: '',
-      ownerName: '',
+      parentId: '',
       productName: '',
       productDescription: '',
-      price: 0.0,
-      category: '',
-      spareParts: false,
+      categoryId: '',
+      categoryName: '',
+      price: 0,
+      quantity: 0,
       productImages: [],
+      adminApproval: '',
+      activated: false,
     );
   }
 
   Data copyWith({
+    String? distributorId,
     String? productId,
-    String? firmName,
-    String? ownerName,
+    String? parentId,
     String? productName,
     String? productDescription,
-    double? price,
-    String? category,
-    bool? spareParts,
+    String? categoryId,
+    String? categoryName,
+    int? price,
+    int? quantity,
     List<String>? productImages,
+    String? adminApproval,
+    bool? activated,
   }) {
     return Data(
+      distributorId: distributorId ?? this.distributorId,
       productId: productId ?? this.productId,
-      firmName: firmName ?? this.firmName,
-      ownerName: ownerName?? this.ownerName,
+      parentId: parentId ?? this.parentId,
       productName: productName ?? this.productName,
       productDescription: productDescription ?? this.productDescription,
+      categoryId: categoryId ?? this.categoryId,
+      categoryName: categoryName ?? this.categoryName,
       price: price ?? this.price,
-      category: category ?? this.category,
-      spareParts: spareParts ?? this.spareParts,
+      quantity: quantity ?? this.quantity,
       productImages: productImages ?? this.productImages,
+      adminApproval: adminApproval ?? this.adminApproval,
+      activated: activated ?? this.activated,
     );
   }
 
-Data.fromJson(Map<String, dynamic> json) {
-  productId = json['productId'];
-  firmName = json['firmName'];
-  ownerName = json['ownerName'];
-  productName = json['productName'];
-  productDescription = json['productDescription'];
-  price = json['price'] is int ? (json['price'] as int).toDouble() : json['price'];
-  category = json['category'];
-   // Convert "true"/"false" (String) to actual boolean
-  spareParts = json['spareParts'] == "true" ? true : false;
-   productImages = json['productImages'].cast<String>();
-}
-
+  Data.fromJson(Map<String, dynamic> json) {
+    distributorId = json['distributorId'];
+    productId = json['productId'];
+    parentId = json['parentId'];
+    productName = json['productName'];
+    productDescription = json['productDescription'];
+    categoryId = json['categoryId'];
+    categoryName = json['categoryName'];
+    price = json['price'];
+    quantity = json['quantity'];
+    productImages = json['productImages'].cast<String>();
+    adminApproval = json['adminApproval'];
+    activated = json['activated'];
+  }
 
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = {};
-    data['productId'] = productId;
-    data['firmName'] = firmName;
-    data['ownerName'] = ownerName;
-    data['productName'] = productName;
+    data['distributorId'] = this.distributorId;
+    data['productId'] = this.productId;
+    data['parentId'] = this.parentId;
+    data['productName'] = this.productName;
     data['productDescription'] = productDescription;
-    data['price'] = price;
-    data['category'] = category;
-    data['spareParts'] = spareParts;
+    data['categoryId'] = this.categoryId;
+    data['categoryName'] = this.categoryName;
+    data['price'] = this.price;
+    data['quantity'] = this.quantity;
     data['productImages'] = productImages;
+    data['adminApproval'] = this.adminApproval;
+    data['activated'] = this.activated;
     return data;
   }
 }

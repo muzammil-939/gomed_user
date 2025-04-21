@@ -18,10 +18,13 @@ class GetserviceProvider extends StateNotifier<ServicebookingModel> {
  Future<void> addServices({
     required String? userId,
     required List<String> serviceId,
+    required String productId,
     required String location,
     required String? address,
     required String date,
     required String time,
+    required String startOtp,
+    required String endOtp
   }) async {
     print('inside create booking....$userId,$serviceId,$location,$address');
     try {
@@ -65,10 +68,13 @@ class GetserviceProvider extends StateNotifier<ServicebookingModel> {
       final Map<String, dynamic> requestBody = {
         "userId": userId ?? '',
         "serviceIds": serviceId,
+        "productId" :productId,
         "location": location,
         "address": address ?? '',
         "date": date,
         "time": time,
+        "satrtotp":startOtp,
+        "endotp":endOtp,
         "status": "pending",
       };
 

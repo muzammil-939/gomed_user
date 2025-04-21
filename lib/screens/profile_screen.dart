@@ -7,6 +7,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart' as loc ;
 import 'package:geocoding/geocoding.dart' ; // Import geocoding package
+import 'package:geocoding/geocoding.dart' as geo;
 
 class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({super.key});
@@ -23,6 +24,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController phoneController = TextEditingController();
   final TextEditingController addressController = TextEditingController();
+    final TextEditingController searchController = TextEditingController();
 
   File? _selectedImage;
   String? _profileImageUrl;
@@ -34,6 +36,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   String _currentAddress = "Fetching location..."; // Holds user's address
   double? lat;
   double? lng;
+
+  
   
   @override
   void didChangeDependencies() {
@@ -47,12 +51,70 @@ void initState() {
 }
 
 
+  @override
+  void dispose() {
+    nameController.dispose();
+    emailController.dispose();
+    phoneController.dispose();
+    addressController.dispose();
+    searchController.dispose(); // <-- Dispose search controller
+    super.dispose();
+  }
+
+  // 🆕 Search Method
+  Future<void> _searchAndNavigate(String query) async {
+    try {
+      List<geo.Location> locations = await locationFromAddress(query);
+      if (locations.isNotEmpty) {
+        final geo.Location location = locations.first;
+
+        final latLng = LatLng(location.latitude, location.longitude);
+
+        List<Placemark> placemarks = await placemarkFromCoordinates(
+          location.latitude,
+          location.longitude,
+        );
+
+        String address = placemarks.isNotEmpty
+            ? "${placemarks.first.street}, ${placemarks.first.locality}, ${placemarks.first.administrativeArea}, ${placemarks.first.country}"
+            : "Unknown location";
+
+        setState(() {
+          _currentPosition = latLng;
+         _currentAddress = address;
+         addressController.text = address; // <-- Optional: autofill address field
+          lat = location.latitude;
+          lng = location.longitude;
+
+          _markers.clear();
+          _markers.add(Marker(
+            markerId: const MarkerId("searchLocation"),
+            position: latLng,
+            infoWindow: InfoWindow(title: "Searched Location", snippet: address),
+          ));
+        });
+
+        _mapController.animateCamera(
+          CameraUpdate.newCameraPosition(
+            CameraPosition(target: latLng, zoom: 16),
+          ),
+        );
+      }
+    } catch (e) {
+      print("Search error: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Unable to find location")),
+      );
+    }
+  }
+ 
+
   void _loadUserData() {
     final userModel = ref.watch(userProvider);
     if (userModel.data != null && userModel.data!.isNotEmpty) {
       final user = userModel.data![0].user;
       setState(() {
-        nameController.text = user?.ownerName ?? "";
+        nameController.text = user?.name ?? "";
         emailController.text = user?.email ?? "";
         phoneController.text = user?.mobile ?? "";
         addressController.text = user?.address ?? "";
@@ -60,6 +122,7 @@ void initState() {
       });
     }
   }
+
     Future<void> _pickImage(ImageSource source) async {
     final ImagePicker picker = ImagePicker();
     final XFile? image = await picker.pickImage(source: source);
@@ -209,7 +272,28 @@ Future<void> getCurrentLocation() async {
             SizedBox(height: screenHeight * 0.02),
             _buildProfileField("Address", addressController, isEditing),
             SizedBox(height: screenHeight * 0.04),
-
+            
+            // 🆕 Search Bar
+            TextField(
+              controller: searchController,
+              onSubmitted: (value) => _searchAndNavigate(value),
+              decoration: InputDecoration(
+                hintText: "Search location...",
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.clear),
+                  onPressed: () {
+                    searchController.clear();
+                  },
+                ),
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+            SizedBox(height: screenHeight * 0.02),
             // Show Address
             Text(
               "Location:",
@@ -244,7 +328,7 @@ Future<void> getCurrentLocation() async {
                 onPressed: () async {
                   if (isEditing) {
                     try {
-                      await ref.read(userProvider.notifier).updateProfile(
+                     final results = await ref.read(userProvider.notifier).updateProfile(
                         nameController.text,
                         emailController.text,
                         phoneController.text,
@@ -254,7 +338,16 @@ Future<void> getCurrentLocation() async {
                         _selectedImage,
                         ref,
                       );
-                      setState(() {}); 
+                     // setState(() {}); 
+                     if (results == true ){
+                        ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text("Profile Updated Successfull!")),
+                      );
+                     }else{
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text("Failed to updating profile:")),
+                      );
+                     }
                     } catch (e) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text("Error updating profile: $e")),

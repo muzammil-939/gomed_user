@@ -6,13 +6,6 @@ class GetproductModel {
 
   GetproductModel({this.statusCode, this.success, this.messages, this.data});
 
-  factory GetproductModel.initial() => GetproductModel(
-        statusCode: 0,
-        success: false,
-        messages: [],
-        data: [],
-      );
-
   GetproductModel copyWith({
     int? statusCode,
     bool? success,
@@ -27,28 +20,44 @@ class GetproductModel {
     );
   }
 
-  factory GetproductModel.fromJson(Map<String, dynamic> json) => GetproductModel(
-        statusCode: json['statusCode'],
-        success: json['success'],
-        messages: List<String>.from(json['messages'] ?? []),
-        data: (json['data'] as List?)?.map((e) => Data.fromJson(e)).toList(),
-      );
+  factory GetproductModel.initial() {
+    return GetproductModel(
+      statusCode: 0,
+      success: false,
+      messages: [],
+      data: [],
+    );
+  }
 
-  Map<String, dynamic> toJson() => {
-        'statusCode': statusCode,
-        'success': success,
-        'messages': messages,
-        'data': data?.map((e) => e.toJson()).toList(),
-      };
+  GetproductModel.fromJson(Map<String, dynamic> json) {
+    statusCode = json['statusCode'];
+    success = json['success'];
+    messages = json['messages'].cast<String>();
+    if (json['data'] != null) {
+      data = <Data>[];
+      json['data'].forEach((v) {
+        data!.add(Data.fromJson(v));
+      });
+    }
+  }
+
+  Map<String, dynamic> toJson() {
+    final data = <String, dynamic>{};
+    data['statusCode'] = statusCode;
+    data['success'] = success;
+    data['messages'] = messages;
+    if (this.data != null) {
+      data['data'] = this.data!.map((v) => v.toJson()).toList();
+    }
+    return data;
+  }
 }
-
 class Data {
   String? sId;
   UserId? userId;
   List<ProductIds>? productIds;
   String? location;
   String? address;
-  String? status;
   String? createdAt;
   String? updatedAt;
 
@@ -58,21 +67,9 @@ class Data {
     this.productIds,
     this.location,
     this.address,
-    this.status,
     this.createdAt,
     this.updatedAt,
   });
-
-  factory Data.initial() => Data(
-        sId: '',
-        userId: UserId.initial(),
-        productIds: [],
-        location: '',
-        address: '',
-        status: '',
-        createdAt: '',
-        updatedAt: '',
-      );
 
   Data copyWith({
     String? sId,
@@ -80,7 +77,6 @@ class Data {
     List<ProductIds>? productIds,
     String? location,
     String? address,
-    String? status,
     String? createdAt,
     String? updatedAt,
   }) {
@@ -90,37 +86,52 @@ class Data {
       productIds: productIds ?? this.productIds,
       location: location ?? this.location,
       address: address ?? this.address,
-      status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 
-  factory Data.fromJson(Map<String, dynamic> json) => Data(
-        sId: json['_id'],
-        userId: json['userId'] != null ? UserId.fromJson(json['userId']) : null,
-        productIds: (json['productIds'] as List?)
-            ?.map((e) => ProductIds.fromJson(e))
-            .toList(),
-        location: json['location'],
-        address: json['address'],
-        status: json['status'],
-        createdAt: json['createdAt'],
-        updatedAt: json['updatedAt'],
-      );
+  factory Data.initial() {
+    return Data(
+      sId: '',
+      userId: UserId.initial(),
+      productIds: [],
+      location: '',
+      address: '',
+      createdAt: '',
+      updatedAt: '',
+    );
+  }
 
-  Map<String, dynamic> toJson() => {
-        '_id': sId,
-        'userId': userId?.toJson(),
-        'productIds': productIds?.map((e) => e.toJson()).toList(),
-        'location': location,
-        'address': address,
-        'status': status,
-        'createdAt': createdAt,
-        'updatedAt': updatedAt,
-      };
+  Data.fromJson(Map<String, dynamic> json) {
+    sId = json['_id'];
+    userId = json['userId'] != null ? UserId.fromJson(json['userId']) : null;
+    if (json['productIds'] != null) {
+      productIds = <ProductIds>[];
+      json['productIds'].forEach((v) {
+        productIds!.add(ProductIds.fromJson(v));
+      });
+    }
+    location = json['location'];
+    address = json['address'];
+    createdAt = json['createdAt'];
+    updatedAt = json['updatedAt'];
+  }
+
+  Map<String, dynamic> toJson() {
+    final data = <String, dynamic>{};
+    data['_id'] = sId;
+    if (userId != null) data['userId'] = userId!.toJson();
+    if (productIds != null) {
+      data['productIds'] = productIds!.map((v) => v.toJson()).toList();
+    }
+    data['location'] = location;
+    data['address'] = address;
+    data['createdAt'] = createdAt;
+    data['updatedAt'] = updatedAt;
+    return data;
+  }
 }
-
 class UserId {
   String? sId;
   String? name;
@@ -130,88 +141,141 @@ class UserId {
 
   UserId({this.sId, this.name, this.email, this.mobile, this.profileImage});
 
-  factory UserId.initial() => UserId(
-        sId: '',
-        name: '',
-        email: '',
-        mobile: '',
-        profileImage: [],
-      );
+  UserId copyWith({
+    String? sId,
+    String? name,
+    String? email,
+    String? mobile,
+    List<String>? profileImage,
+  }) {
+    return UserId(
+      sId: sId ?? this.sId,
+      name: name ?? this.name,
+      email: email ?? this.email,
+      mobile: mobile ?? this.mobile,
+      profileImage: profileImage ?? this.profileImage,
+    );
+  }
 
-  factory UserId.fromJson(Map<String, dynamic> json) => UserId(
-        sId: json['_id'],
-        name: json['name'],
-        email: json['email'],
-        mobile: json['mobile'],
-        profileImage: List<String>.from(json['profileImage'] ?? []),
-      );
+  factory UserId.initial() {
+    return UserId(
+      sId: '',
+      name: '',
+      email: '',
+      mobile: '',
+      profileImage: [],
+    );
+  }
 
-  Map<String, dynamic> toJson() => {
-        '_id': sId,
-        'name': name,
-        'email': email,
-        'mobile': mobile,
-        'profileImage': profileImage,
-      };
+  UserId.fromJson(Map<String, dynamic> json) {
+    sId = json['_id'];
+    name = json['name'];
+    email = json['email'];
+    mobile = json['mobile'];
+    profileImage = json['profileImage'].cast<String>();
+  }
+
+  Map<String, dynamic> toJson() {
+    final data = <String, dynamic>{};
+    data['_id'] = sId;
+    data['name'] = name;
+    data['email'] = email;
+    data['mobile'] = mobile;
+    data['profileImage'] = profileImage;
+    return data;
+  }
 }
-
 class ProductIds {
   String? sId;
+  int? quantity;
   String? productName;
   String? productDescription;
   int? price;
   String? category;
-  String? spareParts;
   List<String>? productImages;
   DistributorId? distributorId;
+  String? bookingStatus;
 
   ProductIds({
     this.sId,
+    this.quantity,
     this.productName,
     this.productDescription,
     this.price,
     this.category,
-    this.spareParts,
     this.productImages,
     this.distributorId,
+    this.bookingStatus,
   });
 
-  factory ProductIds.initial() => ProductIds(
-        sId: '',
-        productName: '',
-        productDescription: '',
-        price: 0,
-        category: '',
-        spareParts: '',
-        productImages: [],
-        distributorId: DistributorId.initial(),
-      );
+  ProductIds copyWith({
+    String? sId,
+    int? quantity,
+    String? productName,
+    String? productDescription,
+    int? price,
+    String? category,
+    List<String>? productImages,
+    DistributorId? distributorId,
+    String? bookingStatus,
+  }) {
+    return ProductIds(
+      sId: sId ?? this.sId,
+      quantity: quantity ?? this.quantity,
+      productName: productName ?? this.productName,
+      productDescription: productDescription ?? this.productDescription,
+      price: price ?? this.price,
+      category: category ?? this.category,
+      productImages: productImages ?? this.productImages,
+      distributorId: distributorId ?? this.distributorId,
+      bookingStatus: bookingStatus ?? this.bookingStatus,
+    );
+  }
 
-  factory ProductIds.fromJson(Map<String, dynamic> json) => ProductIds(
-        sId: json['_id'],
-        productName: json['productName'],
-        productDescription: json['productDescription'],
-        price: json['price'],
-        category: json['category'],
-        spareParts: json['spareParts'],
-        productImages: List<String>.from(json['productImages'] ?? []),
-        distributorId: json['distributorId'] != null
-            ? DistributorId.fromJson(json['distributorId'])
-            : null,
-      );
+  factory ProductIds.initial() {
+    return ProductIds(
+      sId: '',
+      quantity: 0,
+      productName: '',
+      productDescription: '',
+      price: 0,
+      category: '',
+      productImages: [],
+      distributorId: DistributorId.initial(),
+      bookingStatus: '',
+    );
+  }
 
-  Map<String, dynamic> toJson() => {
-        '_id': sId,
-        'productName': productName,
-        'productDescription': productDescription,
-        'price': price,
-        'category': category,
-        'spareParts': spareParts,
-        'productImages': productImages,
-        'distributorId': distributorId?.toJson(),
-      };
+  ProductIds.fromJson(Map<String, dynamic> json) {
+    sId = json['_id'];
+    quantity = json['quantity'];
+    productName = json['productName'];
+    productDescription = json['productDescription'];
+    price = json['price'];
+    category = json['category'];
+    productImages = json['productImages'].cast<String>();
+    distributorId = json['distributorId'] != null
+        ? DistributorId.fromJson(json['distributorId'])
+        : null;
+    bookingStatus = json['bookingStatus'];
+  }
+
+  Map<String, dynamic> toJson() {
+    final data = <String, dynamic>{};
+    data['_id'] = sId;
+    data['quantity'] = quantity;
+    data['productName'] = productName;
+    data['productDescription'] = productDescription;
+    data['price'] = price;
+    data['category'] = category;
+    data['productImages'] = productImages;
+    if (distributorId != null) {
+      data['distributorId'] = distributorId!.toJson();
+    }
+    data['bookingStatus'] = bookingStatus;
+    return data;
+  }
 }
-
 class DistributorId {
   String? sId;
   String? firmName;
@@ -219,21 +283,37 @@ class DistributorId {
 
   DistributorId({this.sId, this.firmName, this.ownerName});
 
-  factory DistributorId.initial() => DistributorId(
-        sId: '',
-        firmName: '',
-        ownerName: '',
-      );
+  DistributorId copyWith({
+    String? sId,
+    String? firmName,
+    String? ownerName,
+  }) {
+    return DistributorId(
+      sId: sId ?? this.sId,
+      firmName: firmName ?? this.firmName,
+      ownerName: ownerName ?? this.ownerName,
+    );
+  }
 
-  factory DistributorId.fromJson(Map<String, dynamic> json) => DistributorId(
-        sId: json['_id'],
-        firmName: json['firmName'],
-        ownerName: json['ownerName'],
-      );
+  factory DistributorId.initial() {
+    return DistributorId(
+      sId: '',
+      firmName: '',
+      ownerName: '',
+    );
+  }
 
-  Map<String, dynamic> toJson() => {
-        '_id': sId,
-        'firmName': firmName,
-        'ownerName': ownerName,
-      };
+  DistributorId.fromJson(Map<String, dynamic> json) {
+    sId = json['_id'];
+    firmName = json['firmName'];
+    ownerName = json['ownerName'];
+  }
+
+  Map<String, dynamic> toJson() {
+    final data = <String, dynamic>{};
+    data['_id'] = sId;
+    data['firmName'] = firmName;
+    data['ownerName'] = ownerName;
+    return data;
+  }
 }

@@ -122,7 +122,7 @@ class _ProductsDetailsState extends State<ProductsDetails> {
                 SizedBox(height: 8),
                 Text('₹${widget.product.price}', // Replace with actual price
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                  Text(widget.product.productDescription ?? 'Description',), // Dynamic description
+                   Text(widget.product.productDescription ?? 'Description',), // Dynamic description
                 SizedBox(height: 16),
                 Text('Available offers',
                     style: TextStyle(fontWeight: FontWeight.bold)),

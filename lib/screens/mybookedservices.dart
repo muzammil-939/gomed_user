@@ -104,6 +104,7 @@ class _MyServicesPageState extends ConsumerState<MyServicesPage> {
                                                                 bookingDate: service.createdAt ?? 'Unknown',
                                                                 status: service.status ?? 'Pending',
                                                                 price: service.serviceIds?.isNotEmpty == true ? service.serviceIds!.first.price?.toDouble() ?? 0.0 : 0.0,
+                                                                serviceEngineerId: service.serviceEngineerId ?? '',
                                                               ),
                                                         ),
                                                       );

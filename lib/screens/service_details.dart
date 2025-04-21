@@ -5,8 +5,9 @@ import 'bookingstagepage.dart';
 
 class ServiceDetailsPage extends StatelessWidget {
   final Data service;
+  final String productId;
 
-  const ServiceDetailsPage({super.key, required this.service});
+  const ServiceDetailsPage({super.key, required this.service,required this.productId,});
 
   @override
   Widget build(BuildContext context) {
@@ -103,7 +104,7 @@ class ServiceDetailsPage extends StatelessWidget {
                     Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (context) =>  BookingStagePage(serviceId: service.sId!)));
+                            builder: (context) =>  BookingStagePage(serviceId: service.sId!,productId: productId,)));
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue[100],

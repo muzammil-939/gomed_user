@@ -7,7 +7,7 @@ import 'package:gomed_user/screens/products_screen.dart';
 import 'package:gomed_user/screens/home_page.dart';
 
 class HomePageContent extends ConsumerStatefulWidget {
-  final Function(int) onCategorySelected;
+  final  Function(int) onCategorySelected;
   const HomePageContent({super.key, required this.onCategorySelected});
 
   @override
@@ -59,7 +59,7 @@ class _HomePageContentState extends ConsumerState<HomePageContent> {
 
      // Get categories from products
     List<String> categories = productState.data
-            ?.map((product) => product.category)
+            ?.map((product) => product.categoryName)
             .whereType<String>()
             .toSet()
             .toList() ??
@@ -212,10 +212,13 @@ class _HomePageContentState extends ConsumerState<HomePageContent> {
         scrollDirection: Axis.vertical,
         itemCount: services.length, // Use services data from the provider
         itemBuilder: (context, index) {
-          return ServiceCard(
-            screenWidth: screenWidth,
-            screenHeight: screenHeight,
-            service: services[index], // Pass the service data to the card
+          return Padding(
+             padding: EdgeInsets.only(bottom: screenHeight * 0.02), // spacing between cards
+            child: ServiceCard(
+              screenWidth: screenWidth,
+              screenHeight: screenHeight,
+              service: services[index], // Pass the service data to the card
+            ),
           );
         },
       ),
@@ -236,13 +239,13 @@ class ServiceCard extends StatelessWidget {
       height: screenHeight * 0.2,
       width: screenWidth * 0.4,
       margin: EdgeInsets.only(right: screenWidth * 0.03),
-      padding: EdgeInsets.all(screenWidth * 0.03),
+      padding: EdgeInsets.only(top: screenHeight * 0.04,left: screenWidth * 0.03),
       decoration: BoxDecoration(
         color: Colors.white, // Changed background color
         borderRadius: BorderRadius.circular(15), // Increased border radius
         boxShadow: [ // Added shadow
           BoxShadow(
-            color: Colors.grey.withOpacity(0.3),
+            color: Colors.grey.withOpacity(0.1),
             spreadRadius: 5,
             blurRadius: 5,
             offset: const Offset(0, 3), // changes position of shadow
@@ -268,11 +271,11 @@ class ServiceCard extends StatelessWidget {
             children: List.generate(
                 5, (index) => Icon(Icons.star, color: Colors.amber, size: 15)),
           ),
-          SizedBox(height: screenWidth * 0.01),
+          SizedBox(height: screenWidth * 0.02),
           Text(service.details ?? 'Category', style: const TextStyle(color: Colors.blue, fontSize: 12)), // Display category or details
           SizedBox(height: screenWidth * 0.01),
           Text(
-                service.price != null ? '\$${service.price}' : 'Price N/A', // Display price
+                service.price != null ? '₹${service.price}' : 'Price N/A', // Display price
                 style: const TextStyle(
                   color: Colors.green, // Or any color you prefer
                   fontWeight: FontWeight.bold,

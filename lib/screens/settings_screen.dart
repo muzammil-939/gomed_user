@@ -6,6 +6,7 @@ import 'package:gomed_user/providers/auth_state.dart';
 import 'package:gomed_user/providers/firebase_auth.dart';
 import 'package:gomed_user/providers/logout_notifier.dart';
 import 'package:gomed_user/screens/login_screen.dart';
+import 'package:gomed_user/screens/profile_screen.dart';
 
 
 class SettingsPage extends ConsumerStatefulWidget {
@@ -52,6 +53,7 @@ class SettingsPageState extends ConsumerState<SettingsPage>{
               label: 'Profile settings',
               onTap: () {
                 // Navigate to Profile Settings
+                Navigator.push(context, MaterialPageRoute(builder:(context) =>ProfilePage()));
               },
             ),
             _buildSettingsItem(

@@ -102,23 +102,40 @@ class _BookingsPageState extends ConsumerState<BookingsPage> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Status: ${booking.status ?? 'Pending'}',
+                  'Status: ${booking.productIds?.isNotEmpty == true
+                            ? booking.productIds!.first.bookingStatus ?? 'Unknown'
+                            : 'Unknown'}',
                   style: TextStyle(color: Colors.green, fontSize: screenWidth * 0.04),
                 ),
                 ElevatedButton(
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (context) => OrderTrackingPage(
-                          currentStep: 2, // You might need to replace this with a dynamic value
-                          bookingId: booking.sId ?? 'Unknown',
-                          productName: booking.productIds?.isNotEmpty == true ? booking.productIds!.first.productName ?? '' : '',
-                          bookingDate: booking.createdAt ?? 'Unknown',
-                          status: booking.status ?? 'Pending',
-                          price: booking.productIds?.isNotEmpty == true ? booking.productIds!.first.price?.toDouble() ?? 0.0 : 0.0,
-                        ),
+                     MaterialPageRoute(
+                      builder: (context) => OrderTrackingPage(
+                        bookingId: booking.sId ?? 'Unknown',
+                        bookingDate: booking.createdAt ?? 'Unknown',
+                        products: booking.productIds?.map((product) {
+                          final status = product.bookingStatus ?? 'Unknown';
+                          final currentStep = status == 'Booked'
+                              ? 1
+                              : status == 'In Progress'
+                                  ? 2
+                                  : status == 'Completed'
+                                      ? 3
+                                      : 1;
+
+                          return BookedProduct(
+                            name: product.productName ?? '',
+                            price: product.price?.toDouble() ?? 0.0,
+                            quantity: product.quantity ?? 0,
+                            bookingStatus: status,
+                            currentStep: currentStep,
+                          );
+                        }).toList() ?? [],
                       ),
+                    ),
+
                     );
                   },
                   style: ElevatedButton.styleFrom(

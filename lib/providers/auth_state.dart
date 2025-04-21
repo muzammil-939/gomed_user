@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:math';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gomed_user/model/auth.dart' ;
 import 'package:http/retry.dart';
@@ -120,7 +121,7 @@ Future<bool> tryAutoLogin() async {
   //     print("Error while updating profile: $e");
   //   }
   // }
-Future<void> updateProfile(
+Future<bool> updateProfile(
   String? name,
   String? email,
   String? phone,
@@ -144,7 +145,7 @@ Future<void> updateProfile(
 print('user id--$userId, token--$token');
   if (userId == null || token == null) {
     print('User ID or Firebase token is missing.');
-    return;
+    return false;
   }
 
   final apiUrl = "${Bbapi.updateProfile}/$userId";
@@ -173,7 +174,7 @@ print('user id--$userId, token--$token');
         "Authorization": "Bearer $token",
         "Content-Type": "multipart/form-data",
       })
-      ..fields['ownerName'] = name ?? ''
+      ..fields['name'] = name ?? ''
       ..fields['email'] = email ?? ''
       ..fields['mobile'] = phone ?? ''
       ..fields['address'] = address ?? ''
@@ -233,13 +234,15 @@ if (selectedImage != null) {
           print("User Data to Save in SharedPreferences: $userData");
 
          await prefs.setString('userData', userData);
-
+     return true;
     } else {
       print("Failed to update profile. Status code: ${response.statusCode}");
       print("Response: ${response.body}");
+      return false;
     }
   } catch (e) {
     print("Error while updating profile: $e");
+    return false;
   } finally {
     loadingState.state = false; // Hide loading state
   }
@@ -251,6 +254,8 @@ if (selectedImage != null) {
   Future<void> verifyPhoneNumber(
     String phoneNumber,
     WidgetRef ref,
+    BuildContext context,
+    
   ) async {
     final auth = ref.read(firebaseAuthProvider);
     var loader = ref.read(loadingProvider.notifier);
@@ -264,11 +269,23 @@ if (selectedImage != null) {
         verificationCompleted: (PhoneAuthCredential credential) async {
           // loader.state = false;
           await auth.signInWithCredential(credential);
-         
+          _showSnackBar(context, "Phone number automatically verified", Colors.green);
+
         },
+
         verificationFailed: (FirebaseAuthException e) {
           // loader.state = false;
           print("Verification failed: ${e.message}");
+
+           String errorMsg = 'Verification failed.';
+
+
+           if (e.code == 'invalid-phone-number') {
+          errorMsg = 'The phone number is invalid.';
+        } else if (e.message != null) {
+          errorMsg = e.message!;
+        }
+           _showSnackBar(context, errorMsg, Colors.red);
         
         },
         codeSent: (String verificationId, int? resendToken) {
@@ -277,19 +294,30 @@ if (selectedImage != null) {
          // state = PhoneAuthState(verificationId: verificationId);
          pref.setString("verificationid", verificationId);
           codeSentNotifier.state = true; // Update the codeSentProvider
+        _showSnackBar(context, "OTP sent successfully", Colors.blue);
         },
         codeAutoRetrievalTimeout: (String verificationId) {
           // loader.state = false;
           print("Auto-retrieval timeout. Verification ID: $verificationId");
-       
+          _showSnackBar(context, "Auto retrieval timeout. Please enter OTP manually.", Colors.orange);
         },
       );
     } catch (e) {
       loader.state = false;
       print("Error during phone verification: $e");
-     
+      _showSnackBar(context, "Error during verification: $e", Colors.red);
     }
   }
+
+  void _showSnackBar(BuildContext context, String message, Color backgroundColor) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(message),
+      backgroundColor: backgroundColor,
+    ),
+  );
+}
+
 
   Future<void> signInWithPhoneNumber(String smsCode, WidgetRef ref) async {
     final authState = ref.watch(firebaseAuthProvider);

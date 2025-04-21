@@ -9,6 +9,8 @@ import 'home_page.dart';
 import 'package:gomed_user/model/auth.dart'; // Import the UserModel
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -125,7 +127,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                                      lastPhoneNumber = phoneNumber;
                                                         });
                                             // Attempt to send the OTP
-                                            await phoneAuthNotifier.verifyPhoneNumber(phoneNumber, ref);
+                                            await phoneAuthNotifier.verifyPhoneNumber(phoneNumber, ref,context);
                                             startOtpCountdown(); // Start the countdown
                                           } else {
                                             ScaffoldMessenger.of(context).showSnackBar(
@@ -177,7 +179,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           
                                   // Show success message
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text("OTP Verified Successfully!")),
+                                    const SnackBar(content: Text("OTP Verified Successfully!"),
+                                    backgroundColor: Colors.green,),
                                   );
                           
                                   // Navigate to HomePage
@@ -185,18 +188,40 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   //   context,
                                   //   MaterialPageRoute(builder: (context) => const HomePage()),
                                   // );
-                                } catch (e) {
+                                  } on FirebaseAuthException catch (e) {
+                                  setState(() {
+                                  isLoading = false;
+                                         });
+
+                                    String errorMessage = 'Verification failed. Please try again.';
+                                    if (e.code == 'invalid-verification-code') {
+                                      errorMessage = 'The OTP you entered is incorrect.';
+                                    } else if (e.code == 'session-expired') {
+                                      errorMessage = 'OTP session expired. Please request a new one.';
+                                    }
+
+                                   ScaffoldMessenger.of(context).showSnackBar(
+                                   SnackBar(
+                                   content: Text(errorMessage),
+                                    backgroundColor: Colors.red,
+                               ),
+                               );
+                                } catch (e,stackTrace) {
                                    setState(() {
                                       isLoading = false; // Stop loading if there was an error
                                    });
+
+                                   FirebaseCrashlytics.instance.recordError(e, stackTrace, reason: 'OTP verification error');
                                   // Show error message if OTP verification fails
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text("Failed to verify OTP: $e")),
+                                    SnackBar(content: Text("An error occurred: $e"),
+                                    backgroundColor: Colors.red,),
                                   );
                                 }
                               } else {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text("Please enter the OTP.")),
+                                  const SnackBar(content: Text("Please enter the OTP."),
+                                  backgroundColor: Colors.red,),
                                 );
                               }
                             },

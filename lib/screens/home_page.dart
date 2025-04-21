@@ -62,7 +62,7 @@ class _HomePageState extends ConsumerState<HomePage> {
 
     if (userModel.data != null && userModel.data!.isNotEmpty) {
       final user = userModel.data![0].user;
-      ownerName = user?.ownerName ?? "User";
+      ownerName = user?.name ?? "User";
       profileImage =
           user?.profileImage?.isNotEmpty == true ? user!.profileImage![0] : null;
     }
@@ -73,6 +73,7 @@ class _HomePageState extends ConsumerState<HomePage> {
           ? AppBar(
               backgroundColor: Colors.grey[100],
               elevation: 0,
+               automaticallyImplyLeading: false,
               title: Row(
                 children: [
                   if (profileImage != null)

@@ -2,6 +2,7 @@ import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:gomed_user/main.dart';
 import 'package:gomed_user/providers/add_services.dart';
 import 'package:gomed_user/providers/auth_state.dart';
 import 'package:gomed_user/providers/servicebooking_provider.dart';
@@ -12,8 +13,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class BookingStagePage extends ConsumerStatefulWidget {
     final String serviceId; 
+     final String productId;
 
-  const BookingStagePage({super.key,required this.serviceId});
+  const BookingStagePage({super.key,required this.serviceId,required this.productId, });
 
   @override
   _BookingStagePageState createState() => _BookingStagePageState();
@@ -27,6 +29,8 @@ class _BookingStagePageState extends ConsumerState<BookingStagePage> {
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
  // final String serviceId = widget.serviceId; // ✅ Get serviceId
+ String startOtp = generateOtp();
+  String endOtp = generateOtp();
 
 
 
@@ -314,10 +318,13 @@ Future<void> _loadUserData() async {
             await ref.read(getserviceProvider.notifier).addServices(
               userId: userId,
               serviceId: [widget. serviceId],
+              productId: widget.productId,
               location: location,
               address: address,
               date: formattedDate,
               time: formattedTime,
+              startOtp: startOtp,
+              endOtp: endOtp,
               
             );
             

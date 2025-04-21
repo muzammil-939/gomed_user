@@ -41,49 +41,49 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyBDsnIu_TrR3VnGcu3DQLZCOjprsV7VqhA',
-    appId: '1:942219741281:web:98f68c57cb114357624220',
-    messagingSenderId: '942219741281',
-    projectId: 'go-med-serve',
-    authDomain: 'go-med-serve.firebaseapp.com',
-    storageBucket: 'go-med-serve.firebasestorage.app',
-    measurementId: 'G-2T02FSJBXQ',
+    apiKey: 'AIzaSyC-UZbXCUYzYOHse5O8Xk8s8elyeB8_6lQ',
+    appId: '1:188631012849:web:04b9adbf7272563c7e2050',
+    messagingSenderId: '188631012849',
+    projectId: 'go-med-9a330',
+    authDomain: 'go-med-9a330.firebaseapp.com',
+    storageBucket: 'go-med-9a330.firebasestorage.app',
+    measurementId: 'G-H37JY7TBH9',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyBCQI-bNCFSenC7rsyc8NHZVxtoUfSH1O8',
-    appId: '1:942219741281:android:d22862b105a79513624220',
-    messagingSenderId: '942219741281',
-    projectId: 'go-med-serve',
-    storageBucket: 'go-med-serve.firebasestorage.app',
+    apiKey: 'AIzaSyD2af-NHCkHX6LDtfzOYR4gea6xFFOAx1o',
+    appId: '1:188631012849:android:7105dcc089f12b9c7e2050',
+    messagingSenderId: '188631012849',
+    projectId: 'go-med-9a330',
+    storageBucket: 'go-med-9a330.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyDCoPoASlRloT-sHluzDk1xMn8iJeZLD6c',
-    appId: '1:942219741281:ios:11886464d5300288624220',
-    messagingSenderId: '942219741281',
-    projectId: 'go-med-serve',
-    storageBucket: 'go-med-serve.firebasestorage.app',
+    apiKey: 'AIzaSyCRo84aNwN8rfejDKGdZnj9JW9RDToDQo0',
+    appId: '1:188631012849:ios:b840c31d39b290887e2050',
+    messagingSenderId: '188631012849',
+    projectId: 'go-med-9a330',
+    storageBucket: 'go-med-9a330.firebasestorage.app',
     iosBundleId: 'gomeduser.gomedUser',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyDCoPoASlRloT-sHluzDk1xMn8iJeZLD6c',
-    appId: '1:942219741281:ios:11886464d5300288624220',
-    messagingSenderId: '942219741281',
-    projectId: 'go-med-serve',
-    storageBucket: 'go-med-serve.firebasestorage.app',
+    apiKey: 'AIzaSyCRo84aNwN8rfejDKGdZnj9JW9RDToDQo0',
+    appId: '1:188631012849:ios:b840c31d39b290887e2050',
+    messagingSenderId: '188631012849',
+    projectId: 'go-med-9a330',
+    storageBucket: 'go-med-9a330.firebasestorage.app',
     iosBundleId: 'gomeduser.gomedUser',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyBDsnIu_TrR3VnGcu3DQLZCOjprsV7VqhA',
-    appId: '1:942219741281:web:e2d461d1a5d4f10e624220',
-    messagingSenderId: '942219741281',
-    projectId: 'go-med-serve',
-    authDomain: 'go-med-serve.firebaseapp.com',
-    storageBucket: 'go-med-serve.firebasestorage.app',
-    measurementId: 'G-Z5HD82DNKV',
+    apiKey: 'AIzaSyC-UZbXCUYzYOHse5O8Xk8s8elyeB8_6lQ',
+    appId: '1:188631012849:web:eca97f41bc39dfa37e2050',
+    messagingSenderId: '188631012849',
+    projectId: 'go-med-9a330',
+    authDomain: 'go-med-9a330.firebaseapp.com',
+    storageBucket: 'go-med-9a330.firebasestorage.app',
+    measurementId: 'G-SQBB199CP6',
   );
 
 }

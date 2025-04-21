@@ -1,42 +1,37 @@
 import 'package:flutter/material.dart';
 
-class OrderTrackingPage extends StatefulWidget {
-  final String bookingId;
-  final String productName;
-  final String bookingDate;
-  final String status;
+class BookedProduct {
+  final String name;
   final double price;
-  final int currentStep; // 1 for "Booked", 2 for "In Progress", 3 for "Completed"
+  final int quantity;
+  final String bookingStatus;
+  final int currentStep;
 
-  const OrderTrackingPage({super.key, required this.currentStep, required this.bookingId,
-    required this.productName,
-    required this.bookingDate,
-    required this.status,
-    required this.price});
-
-  @override
-  _OrderTrackingPageState createState() => _OrderTrackingPageState();
+  BookedProduct({
+    required this.name,
+    required this.price,
+    required this.quantity,
+    required this.bookingStatus,
+    required this.currentStep,
+  });
 }
 
-class _OrderTrackingPageState extends State<OrderTrackingPage> {
+class OrderTrackingPage extends StatelessWidget {
+  final String bookingId;
+  final String bookingDate;
+  final List<BookedProduct> products;
+
+  const OrderTrackingPage({
+    super.key,
+    required this.bookingId,
+    required this.bookingDate,
+    required this.products,
+  });
+
   @override
   Widget build(BuildContext context) {
     double screenWidth = MediaQuery.of(context).size.width;
     double screenHeight = MediaQuery.of(context).size.height;
-
-    String orderStatus = widget.status;
-    switch (widget.currentStep) {
-      case 1:
-        orderStatus = "Booked...";
-        break;
-      case 2:
-        orderStatus = "In Progress...";
-        break;
-      case 3:
-      default:
-        orderStatus = "Completed...";
-        break;
-    }
 
     return Scaffold(
       appBar: AppBar(
@@ -53,9 +48,7 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.notifications, color: Colors.black),
-            onPressed: () {
-              // Notification functionality
-            },
+            onPressed: () {},
           ),
         ],
       ),
@@ -65,64 +58,48 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Order is $orderStatus',
-              style: TextStyle(
-                fontSize: screenWidth * 0.06,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: screenHeight * 0.02),
-            
-            // Step Progress Bar
-            Row(
-              children: [
-                _buildStep(screenWidth, screenHeight, 1, "Booked", widget.currentStep >= 1),
-                _buildStepDivider(screenWidth, widget.currentStep >= 2),
-                _buildStep(screenWidth, screenHeight, 2, "In Progress", widget.currentStep >= 2),
-                _buildStepDivider(screenWidth, widget.currentStep >= 3),
-                _buildStep(screenWidth, screenHeight, 3, "Completed", widget.currentStep >= 3),
-              ],
-            ),
-            
-            SizedBox(height: screenHeight * 0.04),
-            
-            // Order Details
-            Text(
-               'Order ID: ${widget.bookingId}',
+              'Order ID: $bookingId',
               style: TextStyle(fontSize: screenWidth * 0.04, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Product: ${widget.productName}',
-              style: TextStyle(fontSize: screenWidth * 0.045, fontWeight: FontWeight.bold),
-            ),
-            Text(
-              'Add-On',
-              style: TextStyle(color: Colors.blue, fontSize: screenWidth * 0.035),
-            ),
-            Text(
-              'Date Time',
-              style: TextStyle(color: Colors.grey, fontSize: screenWidth * 0.035),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '₹ ${widget.price.toStringAsFixed(2)}',
-              style: TextStyle(fontSize: screenWidth * 0.045, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: screenHeight * 0.02),
-            Text(
-              'Lorem ipsum dolor sit amet consectetur. Fusce dui consectetur aenean pellentesque tincidunt.',
-              style: TextStyle(fontSize: screenWidth * 0.035),
-            ),
-            
+            const SizedBox(height: 16),
+
+            // List of Products with Individual Steppers
+            ...products.map((product) => Padding(
+              padding: const EdgeInsets.only(bottom: 24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Product: ${product.name}',
+                    style: TextStyle(fontSize: screenWidth * 0.045, fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(height: 4),
+                  Text('Price: ₹ ${product.price.toStringAsFixed(2)}'),
+                  Text('Quantity: ${product.quantity}'),
+                 // Text('Status: ${product.bookingStatus}'),
+                  SizedBox(height: 12),
+                  
+                  // Individual stepper for product
+                  Row(
+                    children: [
+                      _buildStep(screenWidth, screenHeight, 1, "Booked", product.currentStep >= 1),
+                      _buildStepDivider(screenWidth, product.currentStep >= 2),
+                      _buildStep(screenWidth, screenHeight, 2, "Out of Delivery", product.currentStep >= 2),
+                      _buildStepDivider(screenWidth, product.currentStep >= 3),
+                      _buildStep(screenWidth, screenHeight, 3, "Completed", product.currentStep >= 3),
+                    ],
+                  ),
+
+                  Divider(color: Colors.grey[300]),
+                ],
+              ),
+            )),
+
             const Spacer(),
-            
-            // Leave a Review Button
+
             Center(
               child: ElevatedButton(
-                onPressed: () {
-                  // Leave a review functionality
-                },
+                onPressed: () {},
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blue[100],
                   shape: RoundedRectangleBorder(
