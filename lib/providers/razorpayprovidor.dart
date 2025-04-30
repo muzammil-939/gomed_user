@@ -85,61 +85,77 @@
 // });
 
 
-
-
+import 'dart:developer';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 
-class RazorPayProvider extends StateNotifier<void> {
+final razorpayProvider = StateNotifierProvider<RazorPayController, bool>((ref) {
+  return RazorPayController(ref);
+});
+
+class RazorPayController extends StateNotifier<bool> {
   final Ref ref;
   late Razorpay _razorpay;
 
-  RazorPayProvider(this.ref) : super(null) {
+  RazorPayController(this.ref) : super(false) {
     _razorpay = Razorpay();
     _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
     _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
     _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
   }
 
-  void disposeRazorpay() {
-    _razorpay.clear();
-  }
-
-  Future<void> startPayment({
-    required String amount,
-    required String name,
+  void openCheckout({
+    required double amount,
     required String contact,
     required String email,
-  }) async {
+    required VoidCallback onSuccess,
+    required VoidCallback onFailure,
+  }) {
     var options = {
-      'key': 'rzp_test_YourKeyHere',
-      'amount': int.parse(amount),
-      'name': name,
-      'description': 'Payment',
-      'prefill': {'contact': contact, 'email': email},
-      'external': {'wallets': ['paytm']},
+      'key': 'rzp_test_YourApiKeyHere', // replace with real key
+      'amount': (amount * 100).toInt(),
+      'name': 'Gomed',
+      'description': 'Product Booking',
+      'prefill': {
+        'contact': contact,
+        'email': email,
+      },
+      'external': {
+        'wallets': ['paytm']
+      }
     };
 
     try {
+      _onSuccessCallback = onSuccess;
+      _onFailureCallback = onFailure;
       _razorpay.open(options);
     } catch (e) {
-      print('Error in Razorpay: $e');
+      log('Razorpay Error: $e');
+      onFailure();
     }
   }
 
+  VoidCallback? _onSuccessCallback;
+  VoidCallback? _onFailureCallback;
+
   void _handlePaymentSuccess(PaymentSuccessResponse response) {
-    print("Payment successful: ${response.paymentId}");
+    log("Payment Success: ${response.paymentId}");
+    _onSuccessCallback?.call();
   }
 
   void _handlePaymentError(PaymentFailureResponse response) {
-    print("Payment failed: ${response.code} | ${response.message}");
+    log("Payment Failed: ${response.message}");
+    _onFailureCallback?.call();
   }
 
   void _handleExternalWallet(ExternalWalletResponse response) {
-    print("External wallet selected: ${response.walletName}");
+    log("External Wallet Selected: ${response.walletName}");
+  }
+
+  @override
+  void dispose() {
+    _razorpay.clear();
+    super.dispose();
   }
 }
-
-final razorpayProvider = StateNotifierProvider<RazorPayProvider, void>((ref) {
-  return RazorPayProvider(ref);
-});
