@@ -3,10 +3,8 @@ import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:gomed_user/main.dart';
-import 'package:gomed_user/providers/add_services.dart';
 import 'package:gomed_user/providers/auth_state.dart';
 import 'package:gomed_user/providers/servicebooking_provider.dart';
-import 'package:gomed_user/screens/payment.dart';
 import 'package:gomed_user/screens/razorpay_payment_page.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -34,9 +32,6 @@ class _BookingStagePageState extends ConsumerState<BookingStagePage> {
  // final String serviceId = widget.serviceId; // ✅ Get serviceId
  String startOtp = generateOtp();
   String endOtp = generateOtp();
-
-
-
 
     @override
   void initState() {

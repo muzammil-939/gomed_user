@@ -1,8 +1,5 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:gomed_user/providers/addbooking_provider.dart';
 import 'package:gomed_user/providers/auth_state.dart';
 import 'package:gomed_user/providers/getproduct_provider.dart';
 import 'package:gomed_user/screens/razorpay_payment_page.dart';
@@ -10,11 +7,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:gomed_user/providers/products.dart';
 import 'package:gomed_user/model/product.dart';
 import "package:gomed_user/screens/products_screen.dart";
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:google_places_flutter/google_places_flutter.dart';
-
-import '../providers/razorpayprovidor.dart';
 
 class CartScreen extends ConsumerStatefulWidget {
   const CartScreen({super.key});
@@ -218,7 +212,6 @@ Future<void> _proceedToBuy() async {
       return;
     }
 
-    // Count booked products
     // int bookedCount = selectedProducts.length;
     int bookedCount = selectedProducts.fold(
   0,
@@ -344,28 +337,32 @@ Future<void> _proceedToBuy() async {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  RichText(
-                    text: TextSpan(
-                      style: TextStyle(fontSize: 16, color: Colors.black54),
-                      children: [
-                        TextSpan(text: "Deliver To: "),
-                        TextSpan(
-                          text: add1!.isNotEmpty ? add1 : "No Address",
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
+                  Expanded( // 👈 Prevent overflow here
+                    child: RichText(
+                      overflow: TextOverflow.ellipsis, // Optional
+                      text: TextSpan(
+                        style: TextStyle(fontSize: 16, color: Colors.black54),
+                        children: [
+                          const TextSpan(text: "Deliver To: "),
+                          TextSpan(
+                            text: add1!.isNotEmpty ? add1 : "No Address",
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                   TextButton(
                     onPressed: () => _changeAddress(context),
-                    child: Text("Change", style: TextStyle(color: Colors.blue)),
+                    child: const Text("Change", style: TextStyle(color: Colors.blue)),
                   ),
-                   ],
+                ],
               ),
-            ),
+
+                     ),
                         Padding(
                       padding: const EdgeInsets.all(8),
                       child: Column(
@@ -496,17 +493,6 @@ Future<void> _proceedToBuy() async {
     );
   }
 
-  // Widget _buildSavingsBanner() {
-  //   return Container(
-  //     padding: const EdgeInsets.all(10),
-  //     color: Colors.green[100],
-  //     // child: const Text(
-  //     //   "You're Saving 33% On This Order",
-  //     //   style: TextStyle(fontSize: 16, color: Colors.green, fontWeight: FontWeight.bold),
-  //     // ),
-  //   );
-  // }
-
  Widget _buildCartItem(Data product) {
   int quantity = productQuantities[product.productId!] ?? 1;
   bool isSelected = productSelections[product.productId!] ?? true;
@@ -590,17 +576,6 @@ Future<void> _proceedToBuy() async {
                     ),
                     Row(
                       children: [
-                        // const Text("33% ",
-                        //     style: TextStyle(
-                        //         fontSize: 14,
-                        //         color: Colors.green,
-                        //         fontWeight: FontWeight.bold)),
-                        // const Text("₹2245",
-                        //     style: TextStyle(
-                        //         fontSize: 12,
-                        //         decoration: TextDecoration.lineThrough,
-                        //         color: Colors.black45)),
-                       // const SizedBox(width: 5),
                         Text("₹${product.price}",
                             style: const TextStyle(
                                 fontSize: 14, fontWeight: FontWeight.bold)),
@@ -663,10 +638,6 @@ Future<void> _proceedToBuy() async {
     setState(() {});
   }
 
-  // void _proceedToBuy() {
-  //   List<Data> selectedProducts = cartProducts.where((product) => selectedProductIds.contains(product.productId!)).toList();
-  //   print("Proceeding to buy: ${selectedProducts.map((p) => p.productName).toList()}");
-  // }
 }
 
 class PriceDetails extends StatelessWidget {
