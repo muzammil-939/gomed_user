@@ -7,9 +7,12 @@ import 'package:gomed_user/providers/add_services.dart';
 import 'package:gomed_user/providers/auth_state.dart';
 import 'package:gomed_user/providers/servicebooking_provider.dart';
 import 'package:gomed_user/screens/payment.dart';
+import 'package:gomed_user/screens/razorpay_payment_page.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'mybookedservices.dart';
 
 class BookingStagePage extends ConsumerStatefulWidget {
     final String serviceId; 
@@ -289,71 +292,75 @@ Future<void> _loadUserData() async {
                   if (_selectedDate != null &&
                       _selectedTime != null &&
                       _addressController.text.isNotEmpty) {
-                       final userState = ref.read(userProvider);
+                    final userState = ref.read(userProvider);
 
-                         if (userState.data != null && userState.data!.isNotEmpty) {
-                            final user = userState.data!.first.user;
-                            final userId = user?.sId; // Assuming `sId` is the user ID
-                            final address = _addressController.text;
-                            
-                            // Retrieve latitude & longitude if available
-                            String location = '';
-                            if (user?.location != null) {
-                              location = '${user!.location!.latitude},${user.location!.longitude}';
-                            }
-        
+                    if (userState.data != null && userState.data!.isNotEmpty) {
+                      final user = userState.data!.first.user;
+                      final userId = user?.sId;
+                      final address = _addressController.text;
+                      final contact =  '9999999999';
 
-        if (widget.serviceId.isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Please select at least one service')),
-          );
-          return;
-        }
+                      final email = user?.email ?? 'test@example.com';
 
-            // Format Date and Time
-      String formattedDate = DateFormat('yyyy-MM-dd').format(_selectedDate!);
-      String formattedTime = _selectedTime!.format(context);
-          print('Start OTP: $startOtp, End OTP: $endOtp');
-          try {
-            await ref.read(getserviceProvider.notifier).addServices(
-              userId: userId,
-              serviceId: [widget. serviceId],
-              productId: widget.productId,
-              location: location,
-              address: address,
-              date: formattedDate,
-              time: formattedTime,
-              startOtp: startOtp,
-              endOtp: endOtp,
-              
-            );
-            
+                      String location = '';
+                      if (user?.location != null) {
+                        location = '${user!.location!.latitude},${user.location!.longitude}';
+                      }
 
-            // Show success message
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Booking successful!')),
-            ); 
-                    // Navigator.push(
-                    //   context,
-                    //   MaterialPageRoute(
-                    //     builder: (context) => PaymentPage(
-                    //       address: _addressController.text,
-                    //       selectedDate: _selectedDate!,
-                    //       selectedTime: _selectedTime!,
-                    //     ),
-                    //   ),
-                    // );
-                     } catch (error) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Failed to book service: $error')),
-            );
-          }
-        }
+                      if (widget.serviceId.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Please select at least one service')),
+                        );
+                        return;
+                      }
+
+                      String formattedDate = DateFormat('yyyy-MM-dd').format(_selectedDate!);
+                      String formattedTime = _selectedTime!.format(context);
+
+                      // 🔹 Go to Razorpay page first
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => RazorpayPaymentPage(
+                            amount: 100, // change this dynamically if needed
+                            contact: contact,
+                            email: email,
+                            onSuccess: () async {
+                              try {
+                                await ref.read(getserviceProvider.notifier).addServices(
+                                  userId: userId,
+                                  serviceId: [widget.serviceId],
+                                  productId: widget.productId,
+                                  location: location,
+                                  address: address,
+                                  date: formattedDate,
+                                  time: formattedTime,
+                                  startOtp: startOtp,
+                                  endOtp: endOtp,
+                                );
+
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Booking successful!')),
+                                );
+
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => MyServicesPage()),
+                                );
+                              } catch (error) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Failed to book service: $error')),
+                                );
+                              }
+                            },
+                          ),
+                        ),
+                      );
+                    }
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text(
-                            'Please complete all fields before proceeding.'),
+                        content: Text('Please complete all fields before proceeding.'),
                       ),
                     );
                   }
@@ -369,7 +376,7 @@ Future<void> _loadUserData() async {
                   ),
                 ),
                 child: Text(
-                  'Booking Services',
+                  'SAI Services',
                   style: TextStyle(
                     color: Colors.black,
                     fontSize: screenWidth * 0.045,
@@ -377,6 +384,7 @@ Future<void> _loadUserData() async {
                   ),
                 ),
               ),
+
             ),
           ],
         ),

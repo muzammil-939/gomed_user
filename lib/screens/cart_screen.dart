@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gomed_user/providers/addbooking_provider.dart';
 import 'package:gomed_user/providers/auth_state.dart';
 import 'package:gomed_user/providers/getproduct_provider.dart';
+import 'package:gomed_user/screens/razorpay_payment_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:gomed_user/providers/products.dart';
 import 'package:gomed_user/model/product.dart';
@@ -12,6 +13,8 @@ import "package:gomed_user/screens/products_screen.dart";
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:google_places_flutter/google_places_flutter.dart';
+
+import '../providers/razorpayprovidor.dart';
 
 class CartScreen extends ConsumerStatefulWidget {
   const CartScreen({super.key});
@@ -316,7 +319,7 @@ Future<void> _proceedToBuy() async {
     //double discountMRP = 300; // Static discount
     double platformFee = 20;  // Static platform fee
     //double totalAmount = totalMRP - discountMRP + platformFee;
-    double totalAmount = totalMRP + platformFee;
+    double totalAmount = totalMRP ;
  
     return Scaffold(
       resizeToAvoidBottomInset: true,
@@ -430,7 +433,7 @@ Future<void> _proceedToBuy() async {
                     PriceDetails(
                       totalMRP: totalMRP,
                      // discountMRP: discountMRP,
-                      platformFee: platformFee,
+
                       totalAmount: totalAmount,
                     ),
                       /// 🔹 Selected Product Count
@@ -463,17 +466,28 @@ Future<void> _proceedToBuy() async {
                     Padding(
                       padding: const EdgeInsets.all(10),
                       child: ElevatedButton(
+
                         onPressed: selectedProductIds.isNotEmpty
-                            ? () async {
-                               await _proceedToBuy();
-                              }
-                            : null, // Disable if no item is selected
+                            ? () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => RazorpayPaymentPage(
+                                amount: totalAmount,
+                                onSuccess: _proceedToBuy, email: '', contact: '',
+                              ),
+                            ),
+                          );
+                        }
+                            : null,
+
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.blue,
                           minimumSize: const Size(double.infinity, 50),
                         ),
                         child: const Text("Continue", style: TextStyle(fontSize: 16, color: Colors.white)),
                       ),
+
                     ),
                   ],
                 ),
@@ -658,10 +672,10 @@ Future<void> _proceedToBuy() async {
 class PriceDetails extends StatelessWidget {
   final double totalMRP;
  // final double discountMRP;
-  final double platformFee;
+
   final double totalAmount;
 
-  const PriceDetails({required this.totalMRP, required this.platformFee, required this.totalAmount});
+  const PriceDetails({required this.totalMRP,  required this.totalAmount});
 
   @override
   Widget build(BuildContext context) {
@@ -673,7 +687,7 @@ class PriceDetails extends StatelessWidget {
           children: [
             _buildRow("Total MRP:", "₹${totalMRP.toStringAsFixed(2)}"),
           //  _buildRow("Discount MRP:", "- ₹${discountMRP.toStringAsFixed(2)}"),
-            _buildRow("Platform Fee:", "₹${platformFee.toStringAsFixed(2)}"),
+
             _buildRow("Total Amount:", "₹${totalAmount.toStringAsFixed(2)}", isBold: true),
           ],
         ),
