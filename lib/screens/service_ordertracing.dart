@@ -10,6 +10,8 @@ class ServiceOrdertracing extends ConsumerStatefulWidget {
   final String status;
   final double price;
   final String serviceEngineerId;
+  final String startOtp;
+  final String endOtp;
 
   const ServiceOrdertracing({
     super.key,
@@ -19,6 +21,8 @@ class ServiceOrdertracing extends ConsumerStatefulWidget {
     required this.status,
     required this.price,
     required this.serviceEngineerId,
+    required this.startOtp,
+    required this.endOtp
   });
 
   @override
@@ -42,9 +46,9 @@ void initState() {
     setState(() {
       if (widget.status.toLowerCase() == "confirmed") {
         currentStep = 2;
-      } else if (widget.status.toLowerCase() == "startedservice") {
+      } else if (widget.status.toLowerCase() == "servicestarted") {
         currentStep = 3;
-        } else if (widget.status.toLowerCase() == "completedservice") {
+        } else if (widget.status.toLowerCase() == "servicecompleted") {
         currentStep = 4;
       } else {
         currentStep = 1;
@@ -61,7 +65,7 @@ void initState() {
         ? "Booked..."
         : currentStep == 2
             ? "In Progress..."
-            : currentStep==3? "startedservice": "completed...";
+            : currentStep==3? "servicestarted": "servicecompleted...";
 
     return Scaffold(
       appBar: AppBar(
@@ -106,9 +110,9 @@ void initState() {
                   _buildStepDivider(screenWidth, currentStep >= 2),
                   _buildStep(screenWidth, screenHeight, 2, "In Progress", currentStep >= 2),
                   _buildStepDivider(screenWidth, currentStep >= 3),
-                  _buildStep(screenWidth, screenHeight, 3, "startedservice", currentStep >= 3),
+                  _buildStep(screenWidth, screenHeight, 3, "servicestarted", currentStep >= 3),
                    _buildStepDivider(screenWidth, currentStep >= 4),
-                  _buildStep(screenWidth, screenHeight, 4, "completeservice", currentStep >= 4),
+                  _buildStep(screenWidth, screenHeight, 4, "servicecompleted", currentStep >= 4),
                 ],
               ),
               SizedBox(height: screenHeight * 0.04),
@@ -120,7 +124,7 @@ void initState() {
               ),
               const SizedBox(height: 8),
               Text(
-                'Product: ${widget.serviceName}',
+                'Service: ${widget.serviceName}',
                 style: TextStyle(fontSize: screenWidth * 0.045, fontWeight: FontWeight.bold),
               ),
               Text(
@@ -136,6 +140,11 @@ void initState() {
                 '₹ ${widget.price.toStringAsFixed(2)}',
                 style: TextStyle(fontSize: screenWidth * 0.045, fontWeight: FontWeight.bold),
               ),
+              Text('Start OTP: ${widget.startOtp}',
+                    style: TextStyle(fontWeight: FontWeight.bold),),
+              SizedBox(height: screenHeight * 0.02),
+              Text('End OTP: ${widget.endOtp}',
+                    style: TextStyle(fontWeight: FontWeight.bold),),
               SizedBox(height: screenHeight * 0.02),
               Text(
                 'Lorem ipsum dolor sit amet consectetur. Fusce dui consectetur aenean pellentesque tincidunt.',

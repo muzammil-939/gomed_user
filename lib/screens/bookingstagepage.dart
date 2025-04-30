@@ -292,15 +292,15 @@ Future<void> _loadUserData() async {
                        final userState = ref.read(userProvider);
 
                          if (userState.data != null && userState.data!.isNotEmpty) {
-          final user = userState.data!.first.user;
-          final userId = user?.sId; // Assuming `sId` is the user ID
-          final address = _addressController.text;
-          
-          // Retrieve latitude & longitude if available
-          String location = '';
-          if (user?.location != null) {
-            location = '${user!.location!.latitude},${user.location!.longitude}';
-          }
+                            final user = userState.data!.first.user;
+                            final userId = user?.sId; // Assuming `sId` is the user ID
+                            final address = _addressController.text;
+                            
+                            // Retrieve latitude & longitude if available
+                            String location = '';
+                            if (user?.location != null) {
+                              location = '${user!.location!.latitude},${user.location!.longitude}';
+                            }
         
 
         if (widget.serviceId.isEmpty) {
@@ -313,7 +313,7 @@ Future<void> _loadUserData() async {
             // Format Date and Time
       String formattedDate = DateFormat('yyyy-MM-dd').format(_selectedDate!);
       String formattedTime = _selectedTime!.format(context);
-
+          print('Start OTP: $startOtp, End OTP: $endOtp');
           try {
             await ref.read(getserviceProvider.notifier).addServices(
               userId: userId,

@@ -18,149 +18,128 @@ class _BookingsPageState extends ConsumerState<BookingsPage> {
     Future.microtask(() => ref.read(getproductProvider.notifier).getuserproduct());
   }
 
+  int getCurrentStep(String status) {
+    switch (status.toLowerCase()) {
+      case 'pending':
+        return 1;
+      case 'confirmed':
+        return 2;
+      case 'completed':
+        return 3;
+      default:
+        return 1;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    double screenWidth = MediaQuery.of(context).size.width;
-    double screenHeight = MediaQuery.of(context).size.height;
-
-    final bookingState = ref.watch(getproductProvider); // Watching provider
-    final bookingData = bookingState.data; // Extracting actual data
+    final bookingState = ref.watch(getproductProvider);
+    final bookingData = bookingState.data;
 
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.grey[100],
         elevation: 0,
-        // leading: IconButton(
-        //   icon: const Icon(Icons.arrow_back, color: Colors.black),
-        //   onPressed: () => Navigator.of(context).pop(),
-        // ),
-        title: const Text(
-          'Bookings',
-          style: TextStyle(color: Colors.black),
-        ),
+        title: const Text('Bookings', style: TextStyle(color: Colors.black)),
         actions: [
           IconButton(
             icon: const Icon(Icons.notifications, color: Colors.black),
-            onPressed: () {
-              // Notification functionality
-            },
+            onPressed: () {},
           ),
         ],
       ),
       body: Padding(
-        padding: EdgeInsets.all(screenWidth * 0.05),
-        child: _buildBody(bookingData, screenWidth, screenHeight),
+        padding: const EdgeInsets.all(16),
+        child: _buildBody(bookingData),
       ),
     );
   }
 
-  /// Handles different states: Loading, No Data, and Displaying Bookings
-  Widget _buildBody(List<Data>? bookingData, double screenWidth, double screenHeight) {
+  Widget _buildBody(List<Data>? bookingData) {
     if (bookingData == null) {
-      return const Center(child: CircularProgressIndicator()); // Show loader while fetching
+      return const Center(child: CircularProgressIndicator());
     } else if (bookingData.isEmpty) {
-      return const Center(child: Text('No bookings found.', style: TextStyle(fontSize: 16)));
+      return const Center(child: Text('No bookings found.'));
     }
 
     return ListView.builder(
       itemCount: bookingData.length,
       itemBuilder: (context, index) {
         final booking = bookingData[index];
-        return _buildBookingCard(context, screenWidth, screenHeight, booking);
+        return _buildBookingCard(context, booking);
       },
     );
   }
 
-  /// Builds a single booking card
-  Widget _buildBookingCard(BuildContext context, double screenWidth, double screenHeight, Data booking) {
-    String productName = booking.productIds != null && booking.productIds!.isNotEmpty
-  ? booking.productIds!.map((p) => p.productName ?? 'Unknown').join(', ')
-  : 'Unknown Product';
+  Widget _buildBookingCard(BuildContext context, Data booking) {
+    String productNames = booking.productIds?.map((p) => p.productName ?? 'Unknown').join(', ') ?? 'Unknown Product';
+   // String bookingStatus = booking.productIds?.first.bookingStatus ?? 'Unknown';
 
     return Card(
-      margin: EdgeInsets.only(bottom: screenHeight * 0.02),
+      margin: const EdgeInsets.symmetric(vertical: 10),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       child: Padding(
-        padding: EdgeInsets.all(screenWidth * 0.04),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              productName,
-              style: TextStyle(
-                fontSize: screenWidth * 0.045,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: screenHeight * 0.01),
-            Text(
-              'Booking Date: ${booking.createdAt ?? 'Unknown'}',
-              style: TextStyle(color: Colors.grey[600], fontSize: screenWidth * 0.035),
-            ),
-            SizedBox(height: screenHeight * 0.01),
+            Text(productNames, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const SizedBox(height: 8),
+            Text('Booking Date: ${booking.createdAt ?? 'Unknown'}', style: TextStyle(color: Colors.grey[600])),
+            const SizedBox(height: 8),
+            // Text(
+            //   'Status: $bookingStatus',
+            //   style: TextStyle(
+            //     color: bookingStatus == 'Completed' ? Colors.green : Colors.orange,
+            //     fontWeight: FontWeight.w600,
+            //   ),
+            // ),
+            const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Status: ${booking.productIds?.isNotEmpty == true
-                            ? booking.productIds!.first.bookingStatus ?? 'Unknown'
-                            : 'Unknown'}',
-                  style: TextStyle(color: Colors.green, fontSize: screenWidth * 0.04),
-                ),
                 ElevatedButton(
                   onPressed: () {
-                    Navigator.push(
-                      context,
-                     MaterialPageRoute(
-                      builder: (context) => OrderTrackingPage(
-                        bookingId: booking.sId ?? 'Unknown',
-                        bookingDate: booking.createdAt ?? 'Unknown',
+                    Navigator.push(context, MaterialPageRoute(
+                      builder: (_) => OrderTrackingPage(
+                        bookingId: booking.sId ?? '',
+                        bookingDate: booking.createdAt ?? '',
                         products: booking.productIds?.map((product) {
-                          final status = product.bookingStatus ?? 'Unknown';
-                          final currentStep = status == 'Booked'
-                              ? 1
-                              : status == 'In Progress'
-                                  ? 2
-                                  : status == 'Completed'
-                                      ? 3
-                                      : 1;
-
                           return BookedProduct(
                             name: product.productName ?? '',
                             price: product.price?.toDouble() ?? 0.0,
                             quantity: product.quantity ?? 0,
-                            bookingStatus: status,
-                            currentStep: currentStep,
+                            bookingStatus: product.bookingStatus ?? '',
+                            currentStep: getCurrentStep(product.bookingStatus ?? ''),
                           );
                         }).toList() ?? [],
                       ),
-                    ),
-
-                    );
+                    ));
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue[100],
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    padding: EdgeInsets.symmetric(
-                      vertical: screenHeight * 0.015,
-                      horizontal: screenWidth * 0.05,
-                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
-                  child: Text(
-                    'View Details',
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontSize: screenWidth * 0.03,
-                    ),
-                  ),
+                  child: const Text('View Details', style: TextStyle(color: Colors.black)),
                 ),
+                 if ((booking.productIds?.any((p) => p.bookingStatus?.toLowerCase() == 'pending') ?? false))
                 ElevatedButton(
                   onPressed: () => _showCancelConfirmationDialog(context, booking.sId ?? ''),
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red[100]),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red[100],
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
                   child: const Text('Cancel', style: TextStyle(color: Colors.red)),
-                ),
+                )
+                 else if ((booking.productIds?.any((p) => p.bookingStatus?.toLowerCase() == 'confirmed') ?? false))
+      ElevatedButton(
+        onPressed: () => _showCancelConfirmationDialog(context, booking.sId ?? ''),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.orange[100],
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+        child: const Text('Cancel', style: TextStyle(color: Colors.orange)),
+      )
               ],
             ),
           ],
@@ -168,42 +147,34 @@ class _BookingsPageState extends ConsumerState<BookingsPage> {
       ),
     );
   }
-   void _showCancelConfirmationDialog(BuildContext context, String bookingId) {
+
+  void _showCancelConfirmationDialog(BuildContext context, String bookingId) {
     showDialog(
       context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          title: const Text('Cancel Booking'),
-          content: const Text('Are you sure you want to cancel this booking?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('No'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-                _cancelBooking(bookingId);
-              },
-              child: const Text('Yes', style: TextStyle(color: Colors.red)),
-            ),
-          ],
-        );
-      },
+      builder: (ctx) => AlertDialog(
+        title: const Text('Cancel Booking'),
+        content: const Text('Are you sure you want to cancel this booking?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('No')),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _cancelBooking(bookingId);
+            },
+            child: const Text('Yes', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
     );
   }
 
   Future<void> _cancelBooking(String bookingId) async {
     final success = await ref.read(getproductProvider.notifier).cancelBooking(bookingId);
     if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Booking canceled successfully')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Booking canceled successfully')));
       ref.read(getproductProvider.notifier).getuserproduct();
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to cancel booking')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to cancel booking')));
     }
   }
 }

@@ -89,6 +89,8 @@ class _MyServicesPageState extends ConsumerState<MyServicesPage> {
                             children: [
                               Text(service.serviceIds![0].name ?? "Unknown Service"),
                               Text("Price: ₹${service.serviceIds![0].price ?? 'N/A'}"),
+                              Text('Status: ${service.status}',
+                              ),
                               SizedBox(height: screenHeight * 0.01),
                               Row(
                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -105,6 +107,8 @@ class _MyServicesPageState extends ConsumerState<MyServicesPage> {
                                                                 status: service.status ?? 'Pending',
                                                                 price: service.serviceIds?.isNotEmpty == true ? service.serviceIds!.first.price?.toDouble() ?? 0.0 : 0.0,
                                                                 serviceEngineerId: service.serviceEngineerId ?? '',
+                                                                startOtp:service.startOtp ?? '',
+                                                                endOtp:service.endOtp ?? ''
                                                               ),
                                                         ),
                                                       );

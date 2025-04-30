@@ -234,10 +234,14 @@ Future<void> _proceedToBuy() async {
     List<Map<String, dynamic>> productIds = selectedProducts.map((product) {
   String id = product.productId!;
   int quantity = productQuantities[id] ?? 1;
+  String distributorid=product.distributorId!;
+  int price=product.price!;
 
   return {
     "productId": id,
     "quantity": quantity,
+    "distributor_id":distributorid,
+    "price":price
   };
 }).toList();
                                      
@@ -309,9 +313,10 @@ Future<void> _proceedToBuy() async {
     });
 
 
-    double discountMRP = 300; // Static discount
+    //double discountMRP = 300; // Static discount
     double platformFee = 20;  // Static platform fee
-    double totalAmount = totalMRP - discountMRP + platformFee;
+    //double totalAmount = totalMRP - discountMRP + platformFee;
+    double totalAmount = totalMRP + platformFee;
  
     return Scaffold(
       resizeToAvoidBottomInset: true,
@@ -424,7 +429,7 @@ Future<void> _proceedToBuy() async {
                     ),
                     PriceDetails(
                       totalMRP: totalMRP,
-                      discountMRP: discountMRP,
+                     // discountMRP: discountMRP,
                       platformFee: platformFee,
                       totalAmount: totalAmount,
                     ),
@@ -571,17 +576,17 @@ Future<void> _proceedToBuy() async {
                     ),
                     Row(
                       children: [
-                        const Text("33% ",
-                            style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.green,
-                                fontWeight: FontWeight.bold)),
-                        const Text("₹2245",
-                            style: TextStyle(
-                                fontSize: 12,
-                                decoration: TextDecoration.lineThrough,
-                                color: Colors.black45)),
-                        const SizedBox(width: 5),
+                        // const Text("33% ",
+                        //     style: TextStyle(
+                        //         fontSize: 14,
+                        //         color: Colors.green,
+                        //         fontWeight: FontWeight.bold)),
+                        // const Text("₹2245",
+                        //     style: TextStyle(
+                        //         fontSize: 12,
+                        //         decoration: TextDecoration.lineThrough,
+                        //         color: Colors.black45)),
+                       // const SizedBox(width: 5),
                         Text("₹${product.price}",
                             style: const TextStyle(
                                 fontSize: 14, fontWeight: FontWeight.bold)),
@@ -652,11 +657,11 @@ Future<void> _proceedToBuy() async {
 
 class PriceDetails extends StatelessWidget {
   final double totalMRP;
-  final double discountMRP;
+ // final double discountMRP;
   final double platformFee;
   final double totalAmount;
 
-  const PriceDetails({required this.totalMRP, required this.discountMRP, required this.platformFee, required this.totalAmount});
+  const PriceDetails({required this.totalMRP, required this.platformFee, required this.totalAmount});
 
   @override
   Widget build(BuildContext context) {
@@ -667,7 +672,7 @@ class PriceDetails extends StatelessWidget {
         child: Column(
           children: [
             _buildRow("Total MRP:", "₹${totalMRP.toStringAsFixed(2)}"),
-            _buildRow("Discount MRP:", "- ₹${discountMRP.toStringAsFixed(2)}"),
+          //  _buildRow("Discount MRP:", "- ₹${discountMRP.toStringAsFixed(2)}"),
             _buildRow("Platform Fee:", "₹${platformFee.toStringAsFixed(2)}"),
             _buildRow("Total Amount:", "₹${totalAmount.toStringAsFixed(2)}", isBold: true),
           ],

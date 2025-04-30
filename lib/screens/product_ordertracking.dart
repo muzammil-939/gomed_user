@@ -30,8 +30,8 @@ class OrderTrackingPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    double screenWidth = MediaQuery.of(context).size.width;
-    double screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
       appBar: AppBar(
@@ -39,85 +39,40 @@ class OrderTrackingPage extends StatelessWidget {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Order Tracking',
-          style: TextStyle(color: Colors.black),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications, color: Colors.black),
-            onPressed: () {},
-          ),
-        ],
+        title: const Text('Order Tracking', style: TextStyle(color: Colors.black)),
       ),
       body: Padding(
-        padding: EdgeInsets.all(screenWidth * 0.05),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Order ID: $bookingId',
-              style: TextStyle(fontSize: screenWidth * 0.04, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-
-            // List of Products with Individual Steppers
-            ...products.map((product) => Padding(
-              padding: const EdgeInsets.only(bottom: 24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Product: ${product.name}',
-                    style: TextStyle(fontSize: screenWidth * 0.045, fontWeight: FontWeight.bold),
-                  ),
-                  SizedBox(height: 4),
-                  Text('Price: ₹ ${product.price.toStringAsFixed(2)}'),
-                  Text('Quantity: ${product.quantity}'),
-                 // Text('Status: ${product.bookingStatus}'),
-                  SizedBox(height: 12),
-                  
-                  // Individual stepper for product
-                  Row(
-                    children: [
-                      _buildStep(screenWidth, screenHeight, 1, "Booked", product.currentStep >= 1),
-                      _buildStepDivider(screenWidth, product.currentStep >= 2),
-                      _buildStep(screenWidth, screenHeight, 2, "Out of Delivery", product.currentStep >= 2),
-                      _buildStepDivider(screenWidth, product.currentStep >= 3),
-                      _buildStep(screenWidth, screenHeight, 3, "Completed", product.currentStep >= 3),
-                    ],
-                  ),
-
-                  Divider(color: Colors.grey[300]),
-                ],
+            Text('Order ID: $bookingId', style: const TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            Text('Order Date: $bookingDate', style: TextStyle(color: Colors.grey[700])),
+            const SizedBox(height: 24),
+            Expanded(
+              child: ListView.separated(
+                itemCount: products.length,
+                separatorBuilder: (_, __) => const Divider(),
+                itemBuilder: (context, index) {
+                  final product = products[index];
+                  return _buildProductStepper(product, screenWidth, screenHeight);
+                },
               ),
-            )),
-
-            const Spacer(),
-
+            ),
             Center(
               child: ElevatedButton(
-                onPressed: () {},
+                onPressed: () {
+                  // TODO: Navigate to review screen
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blue[100],
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  padding: EdgeInsets.symmetric(
-                    vertical: screenHeight * 0.02,
-                    horizontal: screenWidth * 0.2,
-                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.25, vertical: 16),
                 ),
-                child: Text(
-                  'Leave a Review',
-                  style: TextStyle(
-                    color: Colors.black,
-                    fontSize: screenWidth * 0.045,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                child: const Text('Leave a Review', style: TextStyle(color: Colors.black)),
               ),
             ),
           ],
@@ -126,19 +81,52 @@ class OrderTrackingPage extends StatelessWidget {
     );
   }
 
+  Widget _buildProductStepper(BookedProduct product, double screenWidth, double screenHeight) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Product: ${product.name}', style: const TextStyle(fontWeight: FontWeight.bold)),
+        const SizedBox(height: 4),
+        Text('Price: ₹${product.price.toStringAsFixed(2)}'),
+        Text('Quantity: ${product.quantity}'),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            _buildStep(screenWidth, screenHeight, 1, "Booked", product.currentStep >= 1),
+            _buildStepDivider(screenWidth, product.currentStep >= 2),
+            _buildStep(screenWidth, screenHeight, 2, "Out of Delivery", product.currentStep >= 2),
+            _buildStepDivider(screenWidth, product.currentStep >= 3),
+            _buildStep(screenWidth, screenHeight, 3, "Completed", product.currentStep >= 3),
+          ],
+        ),
+      ],
+    );
+  }
+
   Widget _buildStep(double screenWidth, double screenHeight, int step, String title, bool isActive) {
     return Column(
       children: [
-        Container(
-          width: screenWidth * 0.1,
-          height: screenHeight * 0.01,
-          color: isActive ? Colors.blue : Colors.grey[300],
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.easeInOut,
+          width: 30,
+          height: 30,
+          decoration: BoxDecoration(
+            color: isActive ? Colors.blue : Colors.grey[300],
+            shape: BoxShape.circle,
+          ),
+          child: Center(
+            child: Text(
+              '$step',
+              style: TextStyle(color: isActive ? Colors.white : Colors.black),
+            ),
+          ),
         ),
-        SizedBox(height: screenHeight * 0.005),
+        const SizedBox(height: 4),
         Text(
           title,
           style: TextStyle(
-            fontSize: screenWidth * 0.03,
+            fontSize: 12,
             fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
             color: isActive ? Colors.blue : Colors.grey,
           ),
@@ -150,7 +138,7 @@ class OrderTrackingPage extends StatelessWidget {
   Widget _buildStepDivider(double screenWidth, bool isActive) {
     return Expanded(
       child: Container(
-        height: screenWidth * 0.005,
+        height: 2,
         color: isActive ? Colors.blue : Colors.grey[300],
       ),
     );

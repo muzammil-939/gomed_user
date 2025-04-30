@@ -73,8 +73,8 @@ class GetserviceProvider extends StateNotifier<ServicebookingModel> {
         "address": address ?? '',
         "date": date,
         "time": time,
-        "satrtotp":startOtp,
-        "endotp":endOtp,
+        "startOtp":startOtp,
+        "endOtp":endOtp,
         "status": "pending",
       };
 

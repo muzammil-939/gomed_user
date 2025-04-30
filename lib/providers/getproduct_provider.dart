@@ -111,6 +111,7 @@ import 'package:gomed_user/providers/loader.dart';
 import 'package:gomed_user/utils/gomed_api.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/retry.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class GetproductProvider extends StateNotifier<GetproductModel> {
@@ -123,6 +124,8 @@ Future<void> createBooking({
     required List<Map<String, dynamic>> productIds,
     required String location,
     required String? address,
+   
+
   }) async {
 print('inside create booking....$userId,$productIds,$location,$address');
     try {
@@ -150,7 +153,12 @@ print('inside create booking....$userId,$productIds,$location,$address');
       }
 
       print('Retrieved Token: $token');
-
+ List<String> extractedProductIds = productIds.map((product) => product['productId'].toString()).toList();
+    print('Extracted product IDs: $extractedProductIds');
+     List<String> extractedDistributorIds = productIds.map((product) => product['distributor_id'].toString()).toList();
+    print('Extracted distributor IDs: $extractedDistributorIds');
+         List<String> extractedPrice = productIds.map((product) => product['price'].toString()).toList();
+    print('Extracted price: $extractedPrice');
       // Initialize retry logic
       final client = RetryClient(
         http.Client(),
@@ -194,9 +202,42 @@ print('inside create booking....$userId,$productIds,$location,$address');
 
       if (response.statusCode == 201 || response.statusCode == 200) {
         final Map<String, dynamic> responseBody = jsonDecode(response.body);
+        final DatabaseReference dbRef = FirebaseDatabase.instance.ref().child('bookings');
+   // Create a new unique key
+
+    for (var product in productIds) {
+    final String distributorId = product['distributor_id'].toString();
+    final int price = int.tryParse(product['price'].toString()) ?? 0;
+
+    final DatabaseReference distributorRef = dbRef.child(distributorId);
+
+    final DataSnapshot snapshot = await distributorRef.get();
+
+    if (snapshot.exists) {
+      // Add to existing wallet
+      final currentData = snapshot.value as Map;
+      final int currentWallet = int.tryParse(currentData['wallet'].toString()) ?? 0;
+      final int updatedWallet = currentWallet + price;
+
+      await distributorRef.update({
+        'wallet': updatedWallet,
+      });
+
+      print("Updated wallet for distributor $distributorId: $updatedWallet");
+    } else {
+      // Create new record
+      await distributorRef.set({
+        'distributor_id': distributorId,
+        'wallet': price,
+      });
+
+      print("Created new wallet record for distributor $distributorId: $price");
+    }
+  }
        // state = GetproductModel.fromJson(responseBody);
        print('booking products.....$responseBody');
         print("Booking created successfully!");
+
       } else {
         final errorBody = jsonDecode(response.body);
         final errorMessage = errorBody['message'] ?? 'Unexpected error occurred.';
