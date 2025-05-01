@@ -8,12 +8,12 @@ class RazorpayPaymentPage extends StatefulWidget {
   final VoidCallback onSuccess;
 
   const RazorpayPaymentPage({
-    Key? key,
+    super.key,
     required this.amount,
     required this.contact,
     required this.email,
     required this.onSuccess,
-  }) : super(key: key);
+  });
 
   @override
   State<RazorpayPaymentPage> createState() => _RazorpayPaymentPageState();
@@ -35,7 +35,7 @@ class _RazorpayPaymentPageState extends State<RazorpayPaymentPage> {
 
   void _startPayment() {
     var options = {
-      'key': 'rzp_live_6tvrYJlTwFFGiV', // your actual Razorpay key
+      'key': 'rzp_live_6tvrYJlTwFFGiV',
       'amount': (widget.amount ).toInt(),
       'name': 'Gomed',
       'description': 'Product Booking',
@@ -48,14 +48,13 @@ class _RazorpayPaymentPageState extends State<RazorpayPaymentPage> {
     try {
       _razorpay.open(options);
     } catch (e) {
-      print('Error: $e');
       Navigator.pop(context);
     }
   }
 
 
   void _handleSuccess(PaymentSuccessResponse response) async {
-    widget.onSuccess(); // ✅ Correct name based on your constructor
+    widget.onSuccess();
 
     Navigator.pop(context);
   }

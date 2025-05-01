@@ -46,6 +46,14 @@ dependencies:
   image_picker: ^1.1.2
 
   font_awesome_flutter: any
+  firebase_database: ^11.3.5
+  razorpay_flutter: ^1.4.0
+  geocoding: ^3.0.0
+  firebase_crashlytics: ^4.3.5
+  cached_network_image: ^3.4.1
+  google_maps_flutter: ^2.12.1
+  google_places_flutter: ^2.1.0
+  location: ^8.0.0
 
 dev_dependencies:
   flutter_test:

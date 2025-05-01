@@ -207,12 +207,11 @@ print('inside create booking....$userId,$productIds,$location,$address');
 
     for (var product in productIds) {
     final String distributorId = product['distributor_id'].toString();
-    //final int price = int.tryParse(product['price'].toString()) ?? 0;
     final int totalprice = int.tryParse(product['price'].toString()) ?? 0;
     final int quantity = int.tryParse(product['quantity'].toString()) ?? 1;
     final int price = totalprice * quantity;
-
     final DatabaseReference distributorRef = dbRef.child(distributorId);
+    
 
     final DataSnapshot snapshot = await distributorRef.get();
 
