@@ -59,10 +59,22 @@ class ServicesPageState extends ConsumerState<ServicesPage>  {
         padding: const EdgeInsets.all(12.0),
         child: productState.data == null || serviceState.data == null
             ? const Center(child: CircularProgressIndicator())
-            : ListView.builder(
-                itemCount: productState.data!.length,
+            : Builder(
+          builder: (context) {
+            final filteredProducts = productState.data!.where((product) {
+              final hasService = serviceState.data!.any(
+                (service) => service.productIds!.contains(product.productId),
+              );
+              return hasService;
+            }).toList();
+
+            if (filteredProducts.isEmpty) {
+              return const Center(child: Text("No services available for any product."));
+            }
+            return ListView.builder(
+                itemCount: filteredProducts.length,
                 itemBuilder: (context, index) {
-                  final product = productState.data![index];
+                  final product = filteredProducts[index];
                   final productServices = serviceState.data!
                       .where((service) => service.productIds!.contains(product.productId))
                       .toList();
@@ -72,10 +84,13 @@ class ServicesPageState extends ConsumerState<ServicesPage>  {
 
                   return ProductCard(product: product, services: productServices);
                 },
-              ),
+              );
+          }
       ),
+    ),
     );
   }
+  
 }
 
 class ProductCard extends StatelessWidget {

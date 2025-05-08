@@ -48,6 +48,13 @@ String generateOtp() {
   return (100000 + random.nextInt(900000)).toString(); // 6-digit
 }
 
+String generatebookingOtp() {
+  final random = Random();
+  // Generate a 4-digit number between 1000 and 9999
+  int otp = 1000 + random.nextInt(9000);
+  return otp.toString();
+}
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
   @override

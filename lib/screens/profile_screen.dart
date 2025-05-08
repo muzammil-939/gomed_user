@@ -17,7 +17,6 @@ class ProfilePage extends ConsumerStatefulWidget {
 }
 
 class _ProfilePageState extends ConsumerState<ProfilePage> {
-  LatLng _initialPosition = const LatLng(37.7749, -122.4194); // Default to San Francisco
 
   bool isEditing = false;
   final TextEditingController nameController = TextEditingController();
@@ -36,6 +35,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   String _currentAddress = "Fetching location..."; // Holds user's address
   double? lat;
   double? lng;
+  bool _isMapReady = false;
+  bool _isLoadingLocation = true;
+
 
   
   
@@ -47,7 +49,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   @override
 void initState() {
   super.initState();
-  getCurrentLocation();  // Keep location fetch here, it's fine
+   WidgetsBinding.instance.addPostFrameCallback((_) {
+      getCurrentLocation();
+    }); // Keep location fetch here, it's fine
 }
 
 
@@ -94,11 +98,14 @@ void initState() {
           ));
         });
 
-        _mapController.animateCamera(
-          CameraUpdate.newCameraPosition(
-            CameraPosition(target: latLng, zoom: 16),
-          ),
-        );
+       if (_isMapReady) {
+  _mapController.animateCamera(
+    CameraUpdate.newCameraPosition(
+      CameraPosition(target: LatLng(lat!, lng!), zoom: 18),
+    ),
+  );
+}
+
       }
     } catch (e) {
       print("Search error: $e");
@@ -196,24 +203,30 @@ Future<void> getCurrentLocation() async {
     String address =
         "${place.street}, ${place.locality}, ${place.administrativeArea}, ${place.country}";
 
-    setState(() {
-      print("Updated lat: $lat, lng: $lng");  // Debugging print inside setState
-      _currentPosition = LatLng(lat!, lng!);
-      _currentAddress = address;
-      _markers.clear();
-      _markers.add(Marker(
-        markerId: const MarkerId("currentLocation"),
-        position: LatLng(lat!, lng!),
-        infoWindow: InfoWindow(title: "Your Location", snippet: address),
-      ));
-    });
+    if (mounted) {
+  setState(() {
+    print("Updated lat: $lat, lng: $lng");
+    _currentPosition = LatLng(lat!, lng!);
+    _currentAddress = address;
+    _markers.clear();
+    _markers.add(Marker(
+      markerId: const MarkerId("currentLocation"),
+      position: LatLng(lat!, lng!),
+      infoWindow: InfoWindow(title: "Your Location", snippet: address),
+    ));
+  });
+}
+
 
     // Move camera to exact location
-    _mapController.animateCamera(
-      CameraUpdate.newCameraPosition(
-        CameraPosition(target: LatLng(lat!, lng!), zoom: 18), // Zoom in closer
-      ),
-    );
+   if (_isMapReady) {
+  _mapController.animateCamera(
+    CameraUpdate.newCameraPosition(
+      CameraPosition(target: LatLng(lat!, lng!), zoom: 18),
+    ),
+  );
+}
+
 
   } catch (e) {
     print("Error getting address: $e");
@@ -295,7 +308,7 @@ Future<void> getCurrentLocation() async {
             ),
             SizedBox(height: screenHeight * 0.02),
             // Show Address
-            Text(
+            const Text(
               "Location:",
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
@@ -311,6 +324,9 @@ Future<void> getCurrentLocation() async {
               child: GoogleMap(
                 onMapCreated: (GoogleMapController controller) {
                   _mapController = controller;
+                  setState(() {
+                 _isMapReady = true;
+                 });
                 },
                 initialCameraPosition: CameraPosition(
                   target: _currentPosition,
@@ -341,11 +357,11 @@ Future<void> getCurrentLocation() async {
                      // setState(() {}); 
                      if (results == true ){
                         ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text("Profile Updated Successfull!")),
+                        const SnackBar(content: Text("Profile Updated Successfull!")),
                       );
                      }else{
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text("Failed to updating profile:")),
+                        const SnackBar(content: Text("Failed to updating profile:")),
                       );
                      }
                     } catch (e) {

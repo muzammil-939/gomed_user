@@ -106,6 +106,7 @@ class _BookingsPageState extends ConsumerState<BookingsPage> {
                         bookingDate: booking.createdAt ?? '',
                         products: booking.productIds?.map((product) {
                           return BookedProduct(
+                            productId: product.sId ?? '',
                             name: product.productName ?? '',
                             price: product.price?.toDouble() ?? 0.0,
                             quantity: product.quantity ?? 0,
@@ -122,24 +123,24 @@ class _BookingsPageState extends ConsumerState<BookingsPage> {
                   ),
                   child: const Text('View Details', style: TextStyle(color: Colors.black)),
                 ),
-                 if ((booking.productIds?.any((p) => p.bookingStatus?.toLowerCase() == 'pending') ?? false))
-                ElevatedButton(
-                  onPressed: () => _showCancelConfirmationDialog(context, booking.sId ?? ''),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red[100],
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                  child: const Text('Cancel', style: TextStyle(color: Colors.red)),
-                )
-                 else if ((booking.productIds?.any((p) => p.bookingStatus?.toLowerCase() == 'confirmed') ?? false))
-      ElevatedButton(
-        onPressed: () => _showCancelConfirmationDialog(context, booking.sId ?? ''),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.orange[100],
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        ),
-        child: const Text('Cancel', style: TextStyle(color: Colors.orange)),
-      )
+      //            if ((booking.productIds?.any((p) => p.bookingStatus?.toLowerCase() == 'pending') ?? false))
+      //           ElevatedButton(
+      //             onPressed: () => _showCancelConfirmationDialog(context, booking.sId ?? '', booking.productIds!.first.sId ?? ''),
+      //             style: ElevatedButton.styleFrom(
+      //               backgroundColor: Colors.red[100],
+      //               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      //             ),
+      //             child: const Text('Cancel', style: TextStyle(color: Colors.red)),
+      //           )
+      //            else if ((booking.productIds?.any((p) => p.bookingStatus?.toLowerCase() == 'confirmed') ?? false))
+      // ElevatedButton(
+      //   onPressed: () => _showCancelConfirmationDialog(context, booking.sId ?? '',booking.productIds!.first.sId ?? ''),
+      //   style: ElevatedButton.styleFrom(
+      //     backgroundColor: Colors.orange[100],
+      //     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      //   ),
+      //   child: const Text('Cancel', style: TextStyle(color: Colors.orange)),
+      // )
               ],
             ),
           ],
@@ -148,33 +149,33 @@ class _BookingsPageState extends ConsumerState<BookingsPage> {
     );
   }
 
-  void _showCancelConfirmationDialog(BuildContext context, String bookingId) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Cancel Booking'),
-        content: const Text('Are you sure you want to cancel this booking?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('No')),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              _cancelBooking(bookingId);
-            },
-            child: const Text('Yes', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-  }
+  // void _showCancelConfirmationDialog(BuildContext context, String bookingId , String productId) {
+  //   showDialog(
+  //     context: context,
+  //     builder: (ctx) => AlertDialog(
+  //       title: const Text('Cancel Booking'),
+  //       content: const Text('Are you sure you want to cancel this booking?'),
+  //       actions: [
+  //         TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('No')),
+  //         TextButton(
+  //           onPressed: () {
+  //             Navigator.pop(ctx);
+  //             _cancelBooking(bookingId,productId);
+  //           },
+  //           child: const Text('Yes', style: TextStyle(color: Colors.red)),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
-  Future<void> _cancelBooking(String bookingId) async {
-    final success = await ref.read(getproductProvider.notifier).cancelBooking(bookingId);
-    if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Booking canceled successfully')));
-      ref.read(getproductProvider.notifier).getuserproduct();
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to cancel booking')));
-    }
-  }
+  // Future<void> _cancelBooking(String bookingId ,String productId) async {
+  //   final success = await ref.read(getproductProvider.notifier).cancelBooking(bookingId,productId);
+  //   if (success) {
+  //     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Booking canceled successfully')));
+  //     ref.read(getproductProvider.notifier).getuserproduct();
+  //   } else {
+  //     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to cancel booking')));
+  //   }
+  // }
 }

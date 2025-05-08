@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../providers/getproduct_provider.dart';
 
 class BookedProduct {
+  final String productId;
   final String name;
   final double price;
   final int quantity;
@@ -8,6 +12,7 @@ class BookedProduct {
   final int currentStep;
 
   BookedProduct({
+     required this.productId,
     required this.name,
     required this.price,
     required this.quantity,
@@ -16,7 +21,7 @@ class BookedProduct {
   });
 }
 
-class OrderTrackingPage extends StatelessWidget {
+class OrderTrackingPage extends ConsumerStatefulWidget {
   final String bookingId;
   final String bookingDate;
   final List<BookedProduct> products;
@@ -27,7 +32,11 @@ class OrderTrackingPage extends StatelessWidget {
     required this.bookingDate,
     required this.products,
   });
+   @override
+  ConsumerState<OrderTrackingPage> createState() => _OrderTrackingPageState();
+}
 
+class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage> {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -48,17 +57,17 @@ class OrderTrackingPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Order ID: $bookingId', style: const TextStyle(fontWeight: FontWeight.bold)),
+            Text('Order ID: ${widget.bookingId}', style: const TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
-            Text('Order Date: $bookingDate', style: TextStyle(color: Colors.grey[700])),
+            Text('Order Date: ${widget.bookingDate}', style: TextStyle(color: Colors.grey[700])),
             const SizedBox(height: 24),
             Expanded(
               child: ListView.separated(
-                itemCount: products.length,
+                itemCount:  widget.products.length,
                 separatorBuilder: (_, __) => const Divider(),
                 itemBuilder: (context, index) {
-                  final product = products[index];
-                  return _buildProductStepper(product, screenWidth, screenHeight);
+                  final product = widget.products[index];
+                  return _buildProductStepper(context ,product, screenWidth, screenHeight);
                 },
               ),
             ),
@@ -81,7 +90,7 @@ class OrderTrackingPage extends StatelessWidget {
     );
   }
 
-  Widget _buildProductStepper(BookedProduct product, double screenWidth, double screenHeight) {
+  Widget _buildProductStepper(BuildContext context, BookedProduct product, double screenWidth, double screenHeight) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -99,6 +108,38 @@ class OrderTrackingPage extends StatelessWidget {
             _buildStep(screenWidth, screenHeight, 3, "Completed", product.currentStep >= 3),
           ],
         ),
+        const SizedBox(height: 10),
+        ElevatedButton(
+  onPressed: () async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Cancel Product Booking"),
+        content: const Text("Are you sure you want to cancel this product from the booking?"),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("No")),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text("Yes")),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      final success = await ref.read(getproductProvider.notifier).cancelBooking(widget.bookingId, product.productId); // ← updated
+      if (success && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Product booking canceled successfully')),
+        );
+        Navigator.pop(context); // Optional: trigger a refresh
+      }
+    }
+  },
+  style: ElevatedButton.styleFrom(
+    backgroundColor: Colors.red[100],
+    foregroundColor: Colors.red[800],
+  ),
+  child: const Text('Cancel Booking'),
+),
+
       ],
     );
   }

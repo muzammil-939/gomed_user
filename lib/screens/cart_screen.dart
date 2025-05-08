@@ -742,6 +742,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:gomed_user/main.dart';
 import 'package:gomed_user/providers/addbooking_provider.dart';
 import 'package:gomed_user/providers/auth_state.dart';
 import 'package:gomed_user/providers/getproduct_provider.dart';
@@ -777,6 +778,9 @@ class CartScreenState extends ConsumerState<CartScreen> {
   double? longitude;
   String? userid;
   String locationAddress = "Fetching location...";
+
+ String bookingOtp = generatebookingOtp();
+
   @override
   void initState() {
     super.initState();
@@ -1009,6 +1013,7 @@ Future<void> _proceedToBuy() async {
       productIds: productIds,
       location: location,
       address: add1,
+      bookingOtp:bookingOtp,
     );
 
     print("✅ Booking successful!");
@@ -1048,18 +1053,19 @@ Future<void> _proceedToBuy() async {
   @override
   Widget build(BuildContext context) {
     double totalMRP = cartProducts.fold(0, (sum, product) {
-      if (productSelections[product.productId!] == true ) { // Only calculate for selected items
-        int quantity = productQuantities[product.productId!] ?? 1;
-        return sum + ((product.price ?? 0) * quantity);
-      }
-      return sum;
-    });
+  if (productSelections[product.productId!] == true) {
+    int quantity = productQuantities[product.productId!] ?? 1;
+    return sum + ((product.price ?? 0) * quantity);
+  }
+  return sum;
+}) * 1.10; // Add 10%
 
 
     //double discountMRP = 300; // Static discount
-    double platformFee = 20;  // Static platform fee
-    //double totalAmount = totalMRP - discountMRP + platformFee;
-    double totalAmount = totalMRP ;
+        
+        double platformFee = totalMRP * 0.025; // 2.5% fee
+        double totalAmount = double.parse(((totalMRP * 1.10) + platformFee).toStringAsFixed(2)); // 10% markup + 2.5% platform fee
+
  
     return Scaffold(
       resizeToAvoidBottomInset: true,
@@ -1084,19 +1090,22 @@ Future<void> _proceedToBuy() async {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  RichText(
-                    text: TextSpan(
-                      style: TextStyle(fontSize: 16, color: Colors.black54),
-                      children: [
-                        TextSpan(text: "Deliver To: "),
-                        TextSpan(
-                          text: add1!.isNotEmpty ? add1 : "No Address",
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
+                      Expanded(
+                    child: RichText(
+                      overflow: TextOverflow.ellipsis,
+                      text: TextSpan(
+                        style: TextStyle(fontSize: 16, color: Colors.black54),
+                        children: [
+                          TextSpan(text: "Deliver To: "),
+                          TextSpan(
+                            text: add1!.isNotEmpty ? add1 : "No Address",
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                   TextButton(
@@ -1172,6 +1181,7 @@ Future<void> _proceedToBuy() async {
                     ),
                     PriceDetails(
                       totalMRP: totalMRP,
+                       platformFee: platformFee,
                      // discountMRP: discountMRP,
 
                       totalAmount: totalAmount,
@@ -1341,9 +1351,10 @@ Future<void> _proceedToBuy() async {
                         //         decoration: TextDecoration.lineThrough,
                         //         color: Colors.black45)),
                        // const SizedBox(width: 5),
-                        Text("₹${product.price}",
-                            style: const TextStyle(
-                                fontSize: 14, fontWeight: FontWeight.bold)),
+                       Text(
+                            "₹${(product.price! * 1.10).toStringAsFixed(2)}",
+                            style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
+                          ),
                       ],
                     ),
                   ],
@@ -1362,11 +1373,11 @@ Future<void> _proceedToBuy() async {
                 icon: const Icon(Icons.delete_outline, color: Colors.black54),
                 label: const Text("Remove", style: TextStyle(color: Colors.black54)),
               ),
-              TextButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.shopping_bag_outlined, color: Colors.blue),
-                label: const Text("Buy Now", style: TextStyle(color: Colors.blue)),
-              ),
+              // TextButton.icon(
+              //   onPressed: () {},
+              //   icon: const Icon(Icons.shopping_bag_outlined, color: Colors.blue),
+              //   label: const Text("Buy Now", style: TextStyle(color: Colors.blue)),
+              // ),
               TextButton(
                 onPressed: () {},
                 child: const Text("Find Similar", style: TextStyle(color: Colors.blue)),
@@ -1412,10 +1423,10 @@ Future<void> _proceedToBuy() async {
 class PriceDetails extends StatelessWidget {
   final double totalMRP;
  // final double discountMRP;
-
   final double totalAmount;
+  final double platformFee;
 
-  const PriceDetails({required this.totalMRP,  required this.totalAmount});
+  const PriceDetails({required this.totalMRP,  required this.totalAmount,required this.platformFee });
 
   @override
   Widget build(BuildContext context) {
@@ -1427,8 +1438,9 @@ class PriceDetails extends StatelessWidget {
           children: [
             _buildRow("Total MRP:", "₹${totalMRP.toStringAsFixed(2)}"),
           //  _buildRow("Discount MRP:", "- ₹${discountMRP.toStringAsFixed(2)}"),
-
+            _buildRow ("Platform Fee (2.5%):", "+₹${platformFee.toStringAsFixed(2)}"),
             _buildRow("Total Amount:", "₹${totalAmount.toStringAsFixed(2)}", isBold: true),
+            
           ],
         ),
       ),

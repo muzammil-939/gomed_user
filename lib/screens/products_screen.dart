@@ -177,8 +177,8 @@ class ProductsScreenState extends ConsumerState<ProductsScreen> with TickerProvi
           ? const Center(child: CircularProgressIndicator()) // Show loading indicator until data is available
       : Column(
         children: [
-          const SizedBox(height: 5,),
-          _buildFilterButtonsRow(),
+          // const SizedBox(height: 5,),
+          // _buildFilterButtonsRow(),
           const SizedBox(height: 5,),
           Container(
             color: Colors.white,
@@ -323,9 +323,12 @@ Widget _buildProductCard(Data product, VoidCallback updateCartCount) {
                }); 
               },
             child: Card(
+
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               elevation: 3,
+              
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   ClipRRect(
@@ -334,30 +337,35 @@ Widget _buildProductCard(Data product, VoidCallback updateCartCount) {
                             (product.productImages != null && product.productImages!.isNotEmpty)
                             ? product.productImages!.first
                              : '',
-
                             // product.productImages!.isNotEmpty ? product.productImages!.first : '', // Get the first image from the list
                               height: screenWidth * 0.3,
-                            width: double.infinity,
-                             fit: BoxFit.cover,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
                                  errorBuilder: (context, error, stackTrace) => const Icon(Icons.image, size: 120),
                             ),
                            ),
-
+                            Padding(
+                              padding: EdgeInsets.all(screenWidth * 0.02),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(truncatedName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                  Text(truncatedDescription, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.grey)),
+                                  Text(
+                                       "₹${(product.price! * 1.10).toStringAsFixed(2)}",
+                                        style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
+                                        ),
+                                  Text("${product.quantity}", style: const TextStyle(color: Color.fromARGB(255, 175, 76, 99), fontWeight: FontWeight.bold)),
+                                  //Text("${product.adminApproval}", style: const TextStyle(color: Color.fromARGB(255, 175, 76, 99), fontWeight: FontWeight.bold)),
+                                ],
+                              ),
+                            ),
+                   const Spacer(),
                   Padding(
-                    padding: EdgeInsets.all(screenWidth * 0.02),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(truncatedName, style: const TextStyle(fontWeight: FontWeight.bold)),
-                       Text(truncatedDescription, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.grey)),
-                        Text("₹${product.price}", style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
-                        Text("${product.quantity}", style: const TextStyle(color: Color.fromARGB(255, 175, 76, 99), fontWeight: FontWeight.bold)),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    child: Padding(
-                      padding: EdgeInsets.all(screenWidth * 0.02),
+                    padding: EdgeInsets.all(3),
+                    child: SizedBox(
+                       height: 30,
+                      width: double.infinity,          
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: isInCart ? Colors.orange : const Color(0xFF1BA4CA),
@@ -385,6 +393,7 @@ Widget _buildProductCard(Data product, VoidCallback updateCartCount) {
                 ],
               ),
             ),
+          
           );
         },
       );
@@ -429,29 +438,29 @@ Widget _buildProductCard(Data product, VoidCallback updateCartCount) {
 
 
 
-        Widget _buildFilterButtonsRow() {
-          return SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                _buildFilterButton('Top Rated'),
-                _buildFilterButton('Customer Ratings'),
-                _buildFilterButton('F Assured'),
-              ],
-            ),
-          );
-        }
+      //   Widget _buildFilterButtonsRow() {
+      //     return SingleChildScrollView(
+      //       scrollDirection: Axis.horizontal,
+      //       child: Row(
+      //         children: [
+      //           _buildFilterButton('Top Rated'),
+      //           _buildFilterButton('Customer Ratings'),
+      //           _buildFilterButton('F Assured'),
+      //         ],
+      //       ),
+      //     );
+      //   }
 
-      Widget _buildFilterButton(String text) {
-        return Container(
-          margin: const EdgeInsets.symmetric(horizontal: 8.0),
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-          decoration: BoxDecoration(
-            color: Colors.grey[200],
-            borderRadius: BorderRadius.circular(16.0),
-            border: Border.all(color: Colors.grey[300]!),
-          ),
-          child: Text(text, style: const TextStyle(color: Colors.black)),
-        );
-      }
+      // Widget _buildFilterButton(String text) {
+      //   return Container(
+      //     margin: const EdgeInsets.symmetric(horizontal: 8.0),
+      //     padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      //     decoration: BoxDecoration(
+      //       color: Colors.grey[200],
+      //       borderRadius: BorderRadius.circular(16.0),
+      //       border: Border.all(color: Colors.grey[300]!),
+      //     ),
+      //     child: Text(text, style: const TextStyle(color: Colors.black)),
+      //   );
+      // }
 }

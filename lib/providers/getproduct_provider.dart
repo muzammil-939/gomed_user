@@ -124,7 +124,7 @@ Future<void> createBooking({
     required List<Map<String, dynamic>> productIds,
     required String location,
     required String? address,
-   
+    required String? bookingOtp,   
 
   }) async {
 print('inside create booking....$userId,$productIds,$location,$address');
@@ -180,6 +180,7 @@ print('inside create booking....$userId,$productIds,$location,$address');
         "address": address ?? '',
         "status": "pending",
         "products": productIds,
+        "Otp" :bookingOtp
       };
 
        // Send POST request with JSON body
@@ -323,7 +324,7 @@ Future<void> getuserproduct() async {
       final res = json.decode(responseBody);
       final productData = GetproductModel.fromJson(res);
 
-      // Ensure `data` is not null before filtering
+      // Ensure data is not null before filtering
       final List<Data> userProducts = productData.data
               ?.where((booking) => booking.userId?.sId == loggedInUserId)
               .toList() ??
@@ -354,9 +355,9 @@ Future<void> getuserproduct() async {
 
 
 
-Future<bool> cancelBooking(String? bookingId) async {
+Future<bool> cancelBooking(String? bookingId, String productId) async {
 
-  final String apiUrl = "${Bbapi.cancelbooking}/$bookingId"; // Replace with actual API endpoint
+  final String apiUrl = "${Bbapi.cancelbooking}/$bookingId/$productId"; // Replace with actual API endpoint
   final loadingState = ref.read(loadingProvider.notifier);
   final loginprovider = ref.read(userProvider);
     final token = loginprovider.data?[0].accessToken;

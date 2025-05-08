@@ -1,27 +1,38 @@
 import 'package:flutter/material.dart';
-//import 'package:gomed_user/model/auth.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gomed_user/model/product.dart';
+import 'package:gomed_user/providers/products.dart';
 import 'package:gomed_user/screens/cart_screen.dart';
-import 'package:gomed_user/model/product.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class ProductsDetails extends StatefulWidget {
+class ProductsDetails extends ConsumerStatefulWidget {
   final Data product;
   final VoidCallback updateCartCount;
+
   const ProductsDetails({super.key, required this.product, required this.updateCartCount});
 
   @override
-  State<ProductsDetails> createState() => _ProductsDetailsState();
+  ConsumerState<ProductsDetails> createState() => _ProductsDetailsState();
 }
 
-class _ProductsDetailsState extends State<ProductsDetails> {
+class _ProductsDetailsState extends ConsumerState<ProductsDetails> {
   int _currentImageIndex = 0;
   bool _isInCart = false;
+  List<Data> similarProducts = [];
 
- @override
+  @override
   void initState() {
     super.initState();
-    _checkCartStatus(); // Check on initialization
+    _checkCartStatus();
+  }
+
+  @override
+  void didUpdateWidget(covariant ProductsDetails oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.product.productId != widget.product.productId) {
+      _checkCartStatus();
+      _filterSimilarProducts(); // Refresh on product change
+    }
   }
 
   Future<void> _checkCartStatus() async {
@@ -32,18 +43,19 @@ class _ProductsDetailsState extends State<ProductsDetails> {
     });
   }
 
-   Future<void> _addToCart() async {
+  Future<void> _addToCart() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     List<String> cartItems = prefs.getStringList('cartItems') ?? [];
 
     if (!cartItems.contains(widget.product.productId)) {
-      cartItems.addAll([widget.product.productId].where((id) => id != null).cast<String>());
+      cartItems.add(widget.product.productId ?? '');
       await prefs.setStringList('cartItems', cartItems);
 
       setState(() {
         _isInCart = true;
       });
       widget.updateCartCount();
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Item added in cart"),
@@ -53,211 +65,138 @@ class _ProductsDetailsState extends State<ProductsDetails> {
     }
   }
 
+  void _filterSimilarProducts() {
+    final allProducts = ref.read(productProvider).data ?? [];
+    final currentCategory = widget.product.categoryName?.trim().toLowerCase();
+
+    final filtered = allProducts.where((p) =>
+        p.productId != widget.product.productId &&
+        p.categoryName?.trim().toLowerCase() == currentCategory).toList();
+
+    setState(() {
+      similarProducts = filtered;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    final productState = ref.watch(productProvider);
+
+    if (productState is AsyncLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (productState is AsyncError) {
+      return const Center(child: Text("Failed to load products"));
+    }
+
+    final allProducts = productState.data ?? [];
+
+    // Fetch similar products only once after data is loaded
+    if (similarProducts.isEmpty && allProducts.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _filterSimilarProducts();
+      });
+    }
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color(0xFF1BA4CA),
         leading: IconButton(
-          icon: Icon(Icons.arrow_back), // Assumed icon
-          onPressed: () {
-            Navigator.pop(context);
-          },
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
         ),
-        title: Text(widget.product.productName ?? 'Product Name'), // Replace with actual product name
+        title: Text(widget.product.productName ?? 'Product Name'),
         actions: [
-          IconButton(
-            icon: Icon(Icons.favorite_border), // Assumed icon
-            onPressed: () {
-              // Handle share
-            },
-          ),
-          IconButton(
-            icon: Icon(Icons.share), // Assumed icon
-            onPressed: () {
-              // Handle share
-            },
-          ),
-          IconButton(
-            icon: Icon(Icons.more_vert), // Assumed icon
-            onPressed: () {
-              // Handle more options
-            },
-          ),
+          IconButton(icon: const Icon(Icons.favorite_border), onPressed: () {}),
+          IconButton(icon: const Icon(Icons.share), onPressed: () {}),
+          IconButton(icon: const Icon(Icons.more_vert), onPressed: () {}),
         ],
       ),
       body: ListView(
         children: [
-          
-           Container(
-          height: 300, // Adjust as needed
-          color: Colors.grey[300], // Placeholder
-          child: widget.product.productImages != null && widget.product.productImages!.isNotEmpty
-              ? Image.network(
-                  widget.product.productImages![_currentImageIndex], // Use _currentImageIndex
-                  fit: BoxFit.cover, // Or BoxFit.contain, depending on your needs
-                  errorBuilder: (context, error, stackTrace) => const Icon(Icons.image, size: 120),
-                )
-              : const Center(child: Text('No IMAGE')),
-        ),
-          // Horizontal Product Thumbnails
-          _buildHorizontalProductImages(widget.product.productImages), // Pass the image URL
-
+          Container(
+            height: 300,
+            color: Colors.grey[300],
+            child: widget.product.productImages != null && widget.product.productImages!.isNotEmpty
+                ? Image.network(
+                    widget.product.productImages![_currentImageIndex],
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => const Icon(Icons.image, size: 120),
+                  )
+                : const Center(child: Text('No IMAGE')),
+          ),
+          _buildHorizontalProductImages(widget.product.productImages),
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                
-                 Text(widget.product.productName ?? 'Product Title', // Replace with actual title
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                SizedBox(height: 8),
+                Text(widget.product.productName ?? 'Product Title',
+                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
                 Row(
-                  children: [
+                  children: const [
                     Icon(Icons.star, color: Colors.yellow),
                     Text('4.5', style: TextStyle(fontWeight: FontWeight.bold)),
-                    Text('(150 ratings)'), // Replace with dynamic ratings/count
+                    Text('(150 ratings)'),
                   ],
                 ),
-                SizedBox(height: 8),
-                Text('₹${widget.product.price}', // Replace with actual price
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                   Text(widget.product.productDescription ?? 'Description',), // Dynamic description
-                SizedBox(height: 16),
-                Text('Available offers',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                Text('Upto ₹50 off on Axis Bank Credit Cards',
-                    style: TextStyle(color: Colors.grey)), // Example offer
+                const SizedBox(height: 8),
+                Text('₹${widget.product.price}',
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                Text(widget.product.productDescription ?? 'Description'),
 
-                SizedBox(height: 16),
-                Text('About the item',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                Text(
-                    'Detailed description goes here. Replace with actual description.'),
+                const SizedBox(height: 16),
+                const Text('About the item', style: TextStyle(fontWeight: FontWeight.bold)),
+                const Text('Detailed description goes here. Replace with actual description.'),
 
-                SizedBox(height: 16),
-                // Specifications Table
+                const SizedBox(height: 16),
                 Table(
-                  children: [
+                  children: const [
                     TableRow(children: [Text('Brand'), Text('Brand Name')]),
                     TableRow(children: [Text('Format'), Text('Tube')]),
                     TableRow(children: [Text('Size'), Text('Large')]),
                   ],
                 ),
 
-                SizedBox(height: 16),
-                // Customer Reviews Section
-                Text('Customer Reviews',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 16),
+                const Text('Customer Reviews', style: TextStyle(fontWeight: FontWeight.bold)),
                 Row(
-                  children: [
+                  children: const [
                     Icon(Icons.star, color: Colors.yellow),
                     Text('4.5', style: TextStyle(fontWeight: FontWeight.bold)),
                     Text('(150 ratings)'),
                   ],
                 ),
-                // Ratings Breakdown (Static for now)
                 _buildRatingBar('5 star', 80),
                 _buildRatingBar('4 star', 50),
                 _buildRatingBar('3 star', 10),
                 _buildRatingBar('2 star', 5),
                 _buildRatingBar('1 star', 5),
 
-                SizedBox(height: 16),
-                // Similar Products Section
-                Text('Similar Products',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                _buildHorizontalProductList(), // Static list
+                const SizedBox(height: 16),
+                const Text('Similar Products', style: TextStyle(fontWeight: FontWeight.bold)),
+                _buildHorizontalProductList(similarProducts),
 
-                SizedBox(height: 16),
-                // Frequently Bought Together
-                Text('Frequently Bought Together',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                _buildHorizontalProductList(), // Static list
+                const SizedBox(height: 16),
+                const Text('Frequently Bought Together', style: TextStyle(fontWeight: FontWeight.bold)),
+                _buildHorizontalbookedProductList(),
 
-                SizedBox(height: 16),
-                // Recently Viewed
-                Text('Recently Viewed',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                _buildHorizontalProductList(), // Static list
-
-                SizedBox(height: 16),
-                // Questions and Answers Section
-                Text('Questions & Answers',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                // Add your Q&A items here (static for now)
-                _buildQuestionAnswer('Question 1', 'Answer 1'),
-                _buildQuestionAnswer('Question 2', 'Answer 2'),
-
-                
-                SizedBox(height: 16),
-                // Delivery & Services Section
-                Text('Delivery & Services',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                Row(
-                  children: [
-                    Expanded( // Address takes up available space
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Deliver to: Hyderabad, Telangana, India'), // Example address
-                          Text('400096', style: TextStyle(color: Colors.grey)), // Example pincode
-                        ],
-                      ),
-                    ),
-                    TextButton( // Changed to TextButton
-                      onPressed: () {
-                        // Handle change address
-                      },
-                      child: Text('Change'),
-                    ),
-                  ],
-                ),
-                Text('Free delivery'), // Example
-                Text('10 Days Replacement Policy'), // Example
-                Text('Cash on Delivery available'), // Example
-                SizedBox(height: 16),
-                // Add to Cart and Buy Now Buttons
+                const SizedBox(height: 16),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
                     ElevatedButton(
                       onPressed: _isInCart
-                      ? () {
-                        Navigator.push(context, 
-                        MaterialPageRoute(builder: (context) =>CartScreen())
-                        );
-                      }
-                      : _addToCart,
+                          ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CartScreen()))
+                          : _addToCart,
                       style: ElevatedButton.styleFrom(
-                          backgroundColor: _isInCart? Colors.orange : const Color(0xFF1BA4CA), 
-                           minimumSize: const Size(150, 50), // Width: 150, Height: 50
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                          ), 
-                         child: Text(
-                          _isInCart ? 'Go to Cart': 'Add to Cart',
-                          style: TextStyle(color: Colors.white, fontSize: 18),),
-                    ),
-                    // OutlinedButton( // Changed to OutlinedButton
-                    //   onPressed: () {
-                    //     // Handle buy now
-                    //   },
-                    //   style: OutlinedButton.styleFrom(
-                    //     side: BorderSide(color: Colors.blue), // Blue border
-                    //   ),
-                    //   child: Text('Buy Now', style: TextStyle(color: Colors.red)),
-                    // ),
-                    ElevatedButton(
-                      onPressed: () {
-                        // Handle buy now
-                      },
-                      style: ElevatedButton.styleFrom(
-                        minimumSize: const Size(150, 50), // Width: 150, Height: 50
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                          backgroundColor: Colors.red),
-                          
-                      child:
-                          Text('Buy Now', style: TextStyle(color: Colors.white)),
+                        backgroundColor: _isInCart ? Colors.orange : const Color(0xFF1BA4CA),
+                        minimumSize: const Size(150, 50),
+                      ),
+                      child: Text(_isInCart ? 'Go to Cart' : 'Add to Cart',
+                          style: const TextStyle(color: Colors.white, fontSize: 18)),
                     ),
                   ],
                 ),
@@ -273,32 +212,90 @@ class _ProductsDetailsState extends State<ProductsDetails> {
     return Row(
       children: [
         Text(label),
-        SizedBox(width: 8),
+        const SizedBox(width: 8),
         Expanded(
           child: LinearProgressIndicator(
-            value: value / 100, // Assuming max is 100, adjust as needed
+            value: value / 100,
             backgroundColor: Colors.grey[300],
-            valueColor: AlwaysStoppedAnimation<Color>(Colors.yellow),
+            valueColor: const AlwaysStoppedAnimation<Color>(Colors.yellow),
           ),
         ),
-        SizedBox(width: 8),
+        const SizedBox(width: 8),
         Text('$value'),
       ],
     );
   }
 
-    Widget _buildHorizontalProductList() {
-    return Container(
-      height: 200, // Adjust as needed
-      color: Colors.grey[200], // Placeholder
+  Widget _buildHorizontalProductList(List<Data> products) {
+    if (products.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(8.0),
+        child: Text("No similar products found"),
+      );
+    }
+
+    return SizedBox(
+      height: 200,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        itemCount: 5, // Replace with your actual count
+        itemCount: products.length,
+        itemBuilder: (context, index) {
+          final product = products[index];
+          return GestureDetector(
+            onTap: () {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ProductsDetails(product: product, updateCartCount: widget.updateCartCount),
+                ),
+              );
+            },
+            child: Container(
+              width: 150,
+              margin: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                color: Colors.white,
+                boxShadow: [BoxShadow(blurRadius: 4, color: Colors.grey.shade300)],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  product.productImages != null && product.productImages!.isNotEmpty
+                      ? Image.network(product.productImages![0],
+                          height: 100, width: double.infinity, fit: BoxFit.cover)
+                      : Container(height: 100, color: Colors.grey[300], child: const Icon(Icons.image)),
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Text(product.productName ?? "Product",
+                        maxLines: 1, overflow: TextOverflow.ellipsis),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                    child: Text('₹${product.price}',
+                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildHorizontalbookedProductList() {
+    return Container(
+      height: 200,
+      color: Colors.grey[200],
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: 5, // Replace with dynamic list if needed
         itemBuilder: (context, index) {
           return Container(
-            width: 150, // Adjust as needed
-            margin: EdgeInsets.all(8),
-            color: Colors.white, // Placeholder for product item
+            width: 150,
+            margin: const EdgeInsets.all(8),
+            color: Colors.white,
             child: Center(child: Text('Product $index')),
           );
         },
@@ -306,351 +303,35 @@ class _ProductsDetailsState extends State<ProductsDetails> {
     );
   }
 
-  // Helper function to build Q&A items (static for now)
-Widget _buildQuestionAnswer(String question, String answer) {
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(question, style: TextStyle(fontWeight: FontWeight.bold)),
-      Text(answer),
-      Row( // Added thumbs up/down buttons
-        children: [
-          IconButton(
-            onPressed: () {
-              // Handle thumbs up
-            },
-            icon: Icon(Icons.thumb_up_alt_outlined),
-          ),
-          Text('0'), // Replace with dynamic count
-          IconButton(
-            onPressed: () {
-              // Handle thumbs down
-            },
-            icon: Icon(Icons.thumb_down_alt_outlined),
-          ),
-          Text('0'), // Replace with dynamic count
-        ],
-      ),
-      SizedBox(height: 8),
-    ],
-  );
-}
-
-    // Helper function for horizontally scrollable product images
   Widget _buildHorizontalProductImages(List<String>? imageUrls) {
     if (imageUrls == null || imageUrls.isEmpty) {
       return const Center(child: Text("No images available"));
     }
 
-    return Container(
-      height: 100, // Reduced height for thumbnails
+    return SizedBox(
+      height: 100,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        itemCount: imageUrls.length, // Use actual count of images
+        itemCount: imageUrls.length,
         itemBuilder: (context, index) {
-          return GestureDetector( // Wrap with GestureDetector
+          return GestureDetector(
             onTap: () {
               setState(() {
-                _currentImageIndex = index; // Update current image index
+                _currentImageIndex = index;
               });
             },
             child: Container(
-              width: 100, // Adjust as needed
-              margin: EdgeInsets.all(8),
-              decoration: BoxDecoration( // Add border for selection
+              margin: const EdgeInsets.all(8),
+              width: 100,
+              decoration: BoxDecoration(
                 border: Border.all(
-                  color: _currentImageIndex == index ? Colors.blue : Colors.transparent, // Highlight selected image
-                  width: 2,
-                ),
-                color: Colors.grey[300], // Placeholder for product image
+                    color: _currentImageIndex == index ? Colors.blue : Colors.grey),
               ),
-             // child: Center(child: Text('Thumbnail ${index + 1}')), // Placeholder
-              child: Image.network(
-                imageUrls[index], // Access each image correctly
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => const Icon(Icons.image, size: 50),
-              ),            ),
+              child: Image.network(imageUrls[index], fit: BoxFit.cover),
+            ),
           );
         },
       ),
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// import 'package:flutter/material.dart';
-// import 'package:gomed_user/model/product.dart';
-
-// class ProductDetailsPopup extends StatelessWidget {
-//   final Data product;
-
-//   const ProductDetailsPopup({super.key, required this.product});
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Dialog(
-//       insetPadding: EdgeInsets.all(10),
-//       child: Column(
-//         mainAxisSize: MainAxisSize.min,
-//         children: [
-//           // App Bar Section with Icons
-//           AppBar(
-//             backgroundColor:const Color(0xFF1BA4CA),
-//             elevation: 0,
-//             leading: IconButton(
-//               icon: Icon(Icons.close, color: Colors.black),
-//               onPressed: () => Navigator.pop(context),
-//             ),
-//             title: Text(
-//               product.productName ?? 'Product Details',
-//               style: TextStyle(color: Colors.black),
-//             ),
-//             actions: [
-//               IconButton(
-//                 icon: Icon(Icons.search, color: Colors.black),
-//                 onPressed: () {
-//                   // TODO: Implement Search functionality
-//                 },
-//               ),
-//               IconButton(
-//                 icon: Icon(Icons.favorite_border, color: Colors.black),
-//                 onPressed: () {
-//                   // TODO: Implement Favorite functionality
-//                 },
-//               ),
-//               IconButton(
-//                 icon: Icon(Icons.shopping_cart, color: Colors.black),
-//                 onPressed: () {
-//                   // TODO: Implement Cart functionality
-//                 },
-//               ),
-//             ],
-//           ),
-//           Expanded(
-//             child: SingleChildScrollView(
-//               child: Padding(
-//                 padding: const EdgeInsets.all(16.0),
-//                 child: Column(
-//                   crossAxisAlignment: CrossAxisAlignment.start,
-//                   children: [
-//                     // Product Image
-//                     Image.network(
-//                       product.productImage ??
-//                           'http://97.74.93.26:3000/sample_product.jpg',
-//                       width: double.infinity,
-//                       height: 200,
-//                       fit: BoxFit.cover,
-//                     ),
-//                     SizedBox(height: 16),
-//                     // Product Name
-//                     Text(
-//                       product.productName ?? 'Product Name',
-//                       style: TextStyle(
-//                           fontSize: 20, fontWeight: FontWeight.bold),
-//                     ),
-//                     SizedBox(height: 8),
-//                     // Product Price
-//                     Text(
-//                       'Price: ₹${product.price?.toStringAsFixed(2) ?? '0.00'}',
-//                       style: TextStyle(
-//                           fontSize: 16, color: Colors.grey[600]),
-//                     ),
-//                     SizedBox(height: 16),
-//                     // Ratings and Offer
-//                     Row(
-//                       children: [
-//                         Icon(Icons.star,
-//                             color: Colors.orange, size: 18),
-//                         Text(
-//                           '4.6',
-//                           style: TextStyle(
-//                               fontSize: 16,
-//                               fontWeight: FontWeight.bold),
-//                         ),
-//                         SizedBox(width: 10),
-//                         Text(
-//                           '209 Ratings',
-//                           style: TextStyle(
-//                               fontSize: 14, color: Colors.grey[600]),
-//                         ),
-//                         SizedBox(width: 10),
-//                         Text(
-//                           '32% OFF',
-//                           style: TextStyle(
-//                               fontSize: 14,
-//                               color: Colors.green,
-//                               fontWeight: FontWeight.bold),
-//                         ),
-//                       ],
-//                     ),
-//                     SizedBox(height: 16),
-//                     // Product Description
-//                     Text(
-//                       'Description',
-//                       style: TextStyle(
-//                           fontSize: 18, fontWeight: FontWeight.bold),
-//                     ),
-//                     Text(product.productDescription ??
-//                         'No description available.'),
-//                     SizedBox(height: 16),
-//                     // Brand and Size
-//                     Row(
-//                       children: [
-//                         Text(
-//                           'Brand: ${product.category ?? 'Unknown'}',
-//                           style: TextStyle(fontSize: 16),
-//                         ),
-//                         SizedBox(width: 10),
-//                         Text(
-//                           'Size: ${product.category ?? 'N/A'}',
-//                           style: TextStyle(fontSize: 16),
-//                         ),
-//                       ],
-//                     ),
-//                     SizedBox(height: 16),
-//                     // Delivery Information
-//                     Text(
-//                       'Delivery Information',
-//                       style: TextStyle(
-//                           fontSize: 18, fontWeight: FontWeight.bold),
-//                     ),
-//                     SizedBox(height: 8),
-//                     Text(
-//                         'Delivery to: ${product.category ?? 'Not available'}'),
-//                     SizedBox(height: 8),
-//                     Text('Get it by: ${product.category ?? 'N/A'}'),
-//                     SizedBox(height: 8),
-//                     Text(
-//                         'Usually ships in: ${product.category ?? '24 hours'}'),
-//                     SizedBox(height: 16),
-//                     Divider(),
-//                     SizedBox(height: 8),
-//                     // Customer Ratings and Review
-//                     Text(
-//                       'Customer Ratings And Review',
-//                       style: TextStyle(
-//                           fontSize: 18, fontWeight: FontWeight.bold),
-//                     ),
-//                     SizedBox(height: 8),
-//                     Row(
-//                       children: [
-//                         Icon(Icons.star,
-//                             color: Colors.orange, size: 18),
-//                         Text(
-//                           '4.6',
-//                           style: TextStyle(
-//                               fontSize: 16,
-//                               fontWeight: FontWeight.bold),
-//                         ),
-//                         SizedBox(width: 10),
-//                         Text(
-//                           '209 Ratings',
-//                           style: TextStyle(
-//                               fontSize: 14, color: Colors.grey[600]),
-//                         ),
-//                         SizedBox(width: 10),
-//                         Text(
-//                           '100 Reviews',
-//                           style: TextStyle(
-//                               fontSize: 14, color: Colors.grey[600]),
-//                         ),
-//                       ],
-//                     ),
-//                     SizedBox(height: 16),
-//                     Divider(),
-//                     SizedBox(height: 8),
-//                     // Questions & Answers Section
-//                     Row(
-//                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//                       children: [
-//                         Text(
-//                           'Questions & Answers',
-//                           style: TextStyle(
-//                               fontSize: 18,
-//                               fontWeight: FontWeight.bold),
-//                         ),
-//                         Icon(Icons.search,
-//                             color: Colors.black, size: 20),
-//                       ],
-//                     ),
-//                     SizedBox(height: 8),
-//                     ListTile(
-//                       title: Text('Q: Is this product genuine?'),
-//                       subtitle: Text(
-//                           'A: Yes, it is 100% genuine and certified.'),
-//                     ),
-//                     ListTile(
-//                       title: Text('Q: What is the expiration date?'),
-//                       subtitle: Text(
-//                           'A: It is at least 12 months from the date of purchase.'),
-//                     ),
-//                     SizedBox(height: 16),
-//                     Divider(),
-//                     SizedBox(height: 8),
-//                     // Additional Details Section (Static)
-//                     Text(
-//                       'Additional Details',
-//                       style: TextStyle(
-//                           fontSize: 18, fontWeight: FontWeight.bold),
-//                     ),
-//                     SizedBox(height: 8),
-//                     Text('Sold By: Gomed Store Pvt Ltd',
-//                         style: TextStyle(fontSize: 16)),
-//                     SizedBox(height: 4),
-//                     Text('Manufacturer: XYZ Pharmaceuticals',
-//                         style: TextStyle(fontSize: 16)),
-//                     SizedBox(height: 4),
-//                     Text('Country of Origin: India',
-//                         style: TextStyle(fontSize: 16)),
-//                     SizedBox(height: 4),
-//                     Text(
-//                       'Disclaimer: Product information is for reference only.',
-//                       style: TextStyle(
-//                           fontSize: 14, color: Colors.grey[600]),
-//                     ),
-//                     SizedBox(height: 20),
-//                     Row(
-//                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//                       children: [
-//                         ElevatedButton(
-//                           onPressed: () {
-//                             print('Add to Cart Clicked');
-//                           },
-//                           style: ElevatedButton.styleFrom(
-//                               backgroundColor: Colors.orange),
-//                           child: Text('Add to Cart',
-//                               style: TextStyle(color: Colors.white)),
-//                         ),
-//                         ElevatedButton(
-//                           onPressed: () {
-//                             print('Buy Now Clicked');
-//                           },
-//                           style: ElevatedButton.styleFrom(
-//                               backgroundColor: Colors.blue),
-//                           child: Text('Buy Now',
-//                               style: TextStyle(color: Colors.white)),
-//                         ),
-//                       ],
-//                     ),
-//                   ],
-//                 ),
-//               ),
-//             ),
-//           ),
-//         ],
-//       ),
-//     );
-//   }
-// }
