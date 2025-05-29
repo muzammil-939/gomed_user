@@ -20,20 +20,22 @@ class CartScreen extends ConsumerStatefulWidget {
   @override
   ConsumerState<CartScreen> createState() => CartScreenState();
 }
-
+enum PaymentMethod { cod, online }
 class CartScreenState extends ConsumerState<CartScreen> {
-  List<String> cartProductIds = [];
+  List<String> cartItemKeys = []; // Now stores composite keys
   List<Data> cartProducts = [];
-  List<String> selectedProductIds = []; // Track selected products
-  Map<String, int> productQuantities = {}; // To track quantity for each product
-  Map<String, bool> productSelections = {}; // Store selection state for each product
+  List<String> selectedCartItemKeys = []; // Track selected cart items by composite key
+  Map<String, int> productQuantities = {}; // Key: composite key, Value: quantity
+  Map<String, bool> productSelections = {}; // Key: composite key, Value: selection state
   TextEditingController locationSearchController = TextEditingController();
-
+  PaymentMethod selectedMethod = PaymentMethod.online;
   String? add1;
   String? add2;
   double? latitude;
   double? longitude;
   String? userid;
+  double?totalAmount;
+  double?codAdvance;
   String locationAddress = "Fetching location...";
 
   String bookingOtp = generatebookingOtp();
@@ -51,16 +53,15 @@ class CartScreenState extends ConsumerState<CartScreen> {
     // Fetch user data from API provider
     var userState = ref.watch(userProvider);
 
-    // ignore: unnecessary_null_comparison
     if (userState != null) {
-      final user = userState.data![0].user; // Assuming user data is fetched
+      final user = userState.data![0].user;
       setState(() {
         userid = userState.data![0].user!.sId;
         add1 = user!.address ?? prefs.getString('add1') ?? "No Address";
         latitude = double.tryParse(user.location?.latitude ?? "0.0");
         longitude = double.tryParse(user.location?.longitude ?? "0.0");
       });
-      print('deatils.....$add1,$latitude,$longitude,$userid');
+      print('details.....$add1,$latitude,$longitude,$userid');
 
       if (latitude != null && longitude != null) {
         _getAddressFromCoordinates(latitude!, longitude!);
@@ -134,25 +135,42 @@ class CartScreenState extends ConsumerState<CartScreen> {
     );
   }
 
+  // UPDATED: Load cart items with composite key support
   Future<void> _loadCartItems() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    cartProductIds = prefs.getStringList('cartItems') ?? [];
-    print('cart product ids---${cartProductIds.length}');
+    cartItemKeys = prefs.getStringList('cartItems') ?? [];
+    print('cart item keys---${cartItemKeys.length}');
 
     final productState = ref.watch(productProvider);
     if (productState.data != null) {
-      cartProducts = productState.data!
-          .where((product) => cartProductIds.contains(product.productId))
-          .toList();
+      cartProducts.clear();
+      
+      // Parse composite keys and find matching products
+      for (String cartItemKey in cartItemKeys) {
+        List<String> parts = cartItemKey.split('_');
+        if (parts.length == 2) {
+          String productId = parts[0];
+          String distributorId = parts[1];
+          
+          // Find the specific product-distributor combination
+          Data? matchingProduct = productState.data!.firstWhere(
+            (product) => product.productId == productId && product.distributorId == distributorId,
+            orElse: () => Data.initial(),
+          );
+          
+          if (matchingProduct != null) {
+            cartProducts.add(matchingProduct);
+            
+            // Initialize selection and quantity using composite key
+            productSelections[cartItemKey] = prefs.getBool('selected_$cartItemKey') ?? true;
+            productQuantities[cartItemKey] = prefs.getInt('quantity_$cartItemKey') ?? 1;
+          }
+        }
+      }
     }
     print('product data--${cartProducts.length}');
 
-    for (var product in cartProducts) {
-      productSelections[product.productId!] = prefs.getBool('selected_${product.productId}') ?? true;
-      productQuantities[product.productId!] = prefs.getInt('quantity_${product.productId}') ?? 1;
-    }
-
-    selectedProductIds = productSelections.entries
+    selectedCartItemKeys = productSelections.entries
         .where((entry) => entry.value == true)
         .map((entry) => entry.key)
         .toList();
@@ -162,48 +180,57 @@ class CartScreenState extends ConsumerState<CartScreen> {
 
   int get totalSelectedBookingCount {
     int count = 0;
-    for (var productId in productSelections.keys) {
-      if (productSelections[productId] == true) {
-        count += productQuantities[productId] ?? 1;
+    for (var cartItemKey in productSelections.keys) {
+      if (productSelections[cartItemKey] == true) {
+        count += productQuantities[cartItemKey] ?? 1;
       }
     }
     return count;
   }
 
-  Future<void> _saveSelection(String productId, bool isSelected) async {
+  // UPDATED: Save selection using composite key
+  Future<void> _saveSelection(String cartItemKey, bool isSelected) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('selected_$productId', isSelected);
+    await prefs.setBool('selected_$cartItemKey', isSelected);
     setState(() {
-      productSelections[productId] = isSelected;
-      // Update the selectedProductIds list
+      productSelections[cartItemKey] = isSelected;
+      // Update the selectedCartItemKeys list
       if (isSelected) {
-        if (!selectedProductIds.contains(productId)) {
-          selectedProductIds.add(productId);
+        if (!selectedCartItemKeys.contains(cartItemKey)) {
+          selectedCartItemKeys.add(cartItemKey);
         }
       } else {
-        selectedProductIds.remove(productId);
+        selectedCartItemKeys.remove(cartItemKey);
       }
     });
   }
 
-  Future<void> _saveQuantity(String productId, int quantity) async {
+  // UPDATED: Save quantity using composite key
+  Future<void> _saveQuantity(String cartItemKey, int quantity) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('quantity_$productId', quantity);
+    await prefs.setInt('quantity_$cartItemKey', quantity);
     setState(() {
-      productQuantities[productId] = quantity;
+      productQuantities[cartItemKey] = quantity;
     });
   }
 
   Future<void> _proceedToBuy() async {
     try {
-      List<Data> selectedProducts = cartProducts
-          .where((product) => product.productId != null &&
-          productSelections[product.productId!] == true)
-          .toList();
+      List<Data> selectedProducts = [];
+      
+      // Get selected products using composite keys
+      for (String cartItemKey in selectedCartItemKeys) {
+        Data? product = cartProducts.firstWhere(
+          (p) => "${p.productId}_${p.distributorId}" == cartItemKey,
+          orElse: () => Data.initial(),
+        );
+        if (product != null) {
+          selectedProducts.add(product);
+        }
+      }
 
       if (selectedProducts.isEmpty) {
         print("❌ No products selected for booking.");
-
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text("⚠️ No products selected for booking."),
@@ -213,10 +240,12 @@ class CartScreenState extends ConsumerState<CartScreen> {
         return;
       }
 
-      // int bookedCount = selectedProducts.length;
       int bookedCount = selectedProducts.fold(
         0,
-            (sum, product) => sum + (productQuantities[product.productId!] ?? 1),
+        (sum, product) {
+          String cartItemKey = "${product.productId}_${product.distributorId}";
+          return sum + (productQuantities[cartItemKey] ?? 1);
+        },
       );
 
       final prefs = await SharedPreferences.getInstance();
@@ -226,18 +255,20 @@ class CartScreenState extends ConsumerState<CartScreen> {
         throw Exception("User data is missing.");
       }
 
-      // List<String> productIds = selectedProducts.map((p) => p.productId.toString()).toList();
       List<Map<String, dynamic>> productIds = selectedProducts.map((product) {
-        String id = product.productId!;
-        int quantity = productQuantities[id] ?? 1;
+        String cartItemKey = "${product.productId}_${product.distributorId}";
+        int quantity = productQuantities[cartItemKey] ?? 1;
         String distributorid = product.distributorId!;
-        int price = product.price!;
+         double userPrice = product.price! + (product.price! * 0.10); // 10% markup
 
         return {
-          "productId": id,
+          "productId": product.productId!,
+          "distributorId": distributorid,
           "quantity": quantity,
-          "distributor_id": distributorid,
-          "price": price
+          "bookingStatus": "pending",     // ✅ Required
+          "userPrice": double.parse(userPrice.toStringAsFixed(2)) // Optional: precision
+         
+
         };
       }).toList();
 
@@ -256,6 +287,13 @@ class CartScreenState extends ConsumerState<CartScreen> {
       print("📍 Location: $location");
       print("🏠 Address: $add1");
       print("✅ Products Booked: $bookedCount");
+      print("✅ booking otp: $bookingOtp");
+      print("✅ Products Booked: $selectedMethod");
+      print("✅ Products Booked: $codAdvance");
+      print("✅ Products Booked: $totalAmount");
+
+      String paymentMethodString = selectedMethod == PaymentMethod.cod? "cod"
+    : "onlinepayment";
 
       await ref.read(getproductProvider.notifier).createBooking(
         userId: userid,
@@ -263,19 +301,22 @@ class CartScreenState extends ConsumerState<CartScreen> {
         location: location,
         address: add1,
         bookingOtp: bookingOtp,
+        paymentmethod:paymentMethodString,
+        codAdvance:codAdvance,
+        totalPrice:totalAmount,
+
       );
 
       print("✅ Booking successful!");
 
-      // Remove booked items from cart
-      cartProductIds.removeWhere((id) => selectedProductIds.contains(id));
-      await prefs.setStringList('cartItems', cartProductIds);
+      // Remove booked items from cart using composite keys
+      cartItemKeys.removeWhere((key) => selectedCartItemKeys.contains(key));
+      await prefs.setStringList('cartItems', cartItemKeys);
 
-      selectedProductIds.clear(); // Clear selected items
+      selectedCartItemKeys.clear();
 
       setState(() {});
 
-      // ✅ Show success message with count
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("$bookedCount products booked successfully!"),
@@ -283,13 +324,12 @@ class CartScreenState extends ConsumerState<CartScreen> {
         ),
       );
 
-      // ✅ Navigate to ProductsScreen if cart is empty
-      if (cartProductIds.isEmpty) {
+      if (cartItemKeys.isEmpty) {
         Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (_) => ProductsScreen(selectedCategory: 'ALL')));
       } else {
-        setState(() {}); // Update UI if cart still has items
+        setState(() {});
       }
     } catch (error) {
       print("❌ Failed to proceed to booking: $error");
@@ -298,16 +338,38 @@ class CartScreenState extends ConsumerState<CartScreen> {
 
   @override
   Widget build(BuildContext context) {
-    double totalMRP = cartProducts.fold(0, (sum, product) {
-      if (productSelections[product.productId!] == true) {
-        int quantity = productQuantities[product.productId!] ?? 1;
-        return sum + ((product.price ?? 0) * quantity);
-      }
-      return sum;
-    });
+    // double totalMRP = 0;
+     double totalBase = 0;
+    int totalSelectedBookingCount = 0;
 
-    double platformFee = totalMRP * 0.025; // 2.5% fee
-    double totalAmount = double.parse(((totalMRP * 1.10) + platformFee).toStringAsFixed(2)); // 10% markup + 2.5% platform fee
+    
+    // Calculate total using composite keys
+    for (Data product in cartProducts) {
+      String cartItemKey = "${product.productId}_${product.distributorId}";
+      if (productSelections[cartItemKey] == true) {
+        int quantity = productQuantities[cartItemKey] ?? 1;
+        // totalMRP += (product.price ?? 0) * quantity;
+        totalBase += (product.price ?? 0) * quantity;
+        totalSelectedBookingCount++;
+      }
+    }
+
+    // double platformFee = totalMRP * 0.025; // 2.5% fee
+    // double totalAmount = double.parse(((totalMRP * 1.10) + platformFee).toStringAsFixed(2));
+
+    double totalAdded = totalBase * 0.10; // 10% of base
+    double userPrice = totalBase + totalAdded;
+    double platformFee = userPrice * 0.025; // 2.5% of userPrice
+    double totalAmount = userPrice + platformFee;
+    double codAdvance = totalAdded + platformFee;
+    print("10% of original price:$totalAdded");
+    print("userPrice:$userPrice");
+    print("platformfee:$platformFee");
+    print("totalAmount:$totalAmount");
+    print("paidPrice:$codAdvance");
+    print("original price:$totalBase");
+    print("paymenttype:$selectedMethod");
+    
 
     return Scaffold(
       resizeToAvoidBottomInset: true,
@@ -424,11 +486,47 @@ class CartScreenState extends ConsumerState<CartScreen> {
 
               // Price details
               PriceDetails(
-                totalMRP: totalMRP,
+                totalMRP: userPrice,
                 platformFee: platformFee,
                 totalAmount: totalAmount,
               ),
-
+              const SizedBox(height: 20),
+                      const Text("Select Payment Method"),
+                      Row(
+                        children: [
+                          Radio<PaymentMethod>(
+                            value: PaymentMethod.cod,
+                            groupValue: selectedMethod,
+                            onChanged: (value) {
+                              if (value != null) {
+                                setState(() {
+                                  selectedMethod = value;
+                                });
+                              }
+                            },
+                          ),
+                          const Text("Cash on Delivery"),
+                          Radio<PaymentMethod>(
+                            value: PaymentMethod.online,
+                            groupValue: selectedMethod,
+                            onChanged: (value) {
+                              if (value != null) {
+                                setState(() {
+                                  selectedMethod = value;
+                                });
+                              }
+                            },
+                          ),
+                          const Text("Online Payment"),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        selectedMethod == PaymentMethod.online
+                            ? "Full Amount to Pay: ₹${totalAmount.toStringAsFixed(2)}"
+                            : "Advance to Pay: ₹${codAdvance.toStringAsFixed(2)}",
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
               // Selected products count
               Padding(
                 padding: const EdgeInsets.all(10),
@@ -439,7 +537,7 @@ class CartScreenState extends ConsumerState<CartScreen> {
               ),
 
               // Warning if no products selected
-              if (selectedProductIds.isEmpty)
+              if (selectedCartItemKeys.isEmpty)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 10),
                   child: Text(
@@ -452,13 +550,17 @@ class CartScreenState extends ConsumerState<CartScreen> {
               Padding(
                 padding: const EdgeInsets.all(10),
                 child: ElevatedButton(
-                  onPressed: selectedProductIds.isNotEmpty
+                  onPressed: selectedCartItemKeys.isNotEmpty
                       ? () {
+                    double payAmount = selectedMethod == PaymentMethod.online
+                                    ? totalAmount
+                                    : codAdvance;    
+                    print("Razorpay Amount:$payAmount");                
                     Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (_) => RazorpayPaymentPage(
-                          amount: totalAmount,
+                          amount: payAmount,
                           onSuccess: _proceedToBuy,
                           email: '',
                           contact: '',
@@ -481,10 +583,12 @@ class CartScreenState extends ConsumerState<CartScreen> {
     );
   }
 
+  // UPDATED: Build cart item using composite key
   Widget _buildCartItem(Data product) {
-    int quantity = productQuantities[product.productId!] ?? 1;
-    bool isSelected = productSelections[product.productId!] ?? true;
-    int maxLimit = product.quantity ?? 1; // Make sure `product.stock` exists in your model
+    String cartItemKey = "${product.productId}_${product.distributorId}";
+    int quantity = productQuantities[cartItemKey] ?? 1;
+    bool isSelected = productSelections[cartItemKey] ?? true;
+    int maxLimit = product.quantity ?? 1;
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -500,7 +604,7 @@ class CartScreenState extends ConsumerState<CartScreen> {
                   value: isSelected,
                   onChanged: (value) {
                     if (value != null) {
-                      _saveSelection(product.productId!, value);
+                      _saveSelection(cartItemKey, value);
                     }
                   },
                 ),
@@ -528,8 +632,9 @@ class CartScreenState extends ConsumerState<CartScreen> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(color: Colors.grey)),
-                      const Text("Size: mid",
-                          style: TextStyle(fontSize: 14, color: Colors.black54)),
+                    Text("AvlQty:${product.quantity}",
+                              style: const TextStyle(
+                                  fontSize: 14, color: Colors.grey)),
                       Row(
                         children: [
                           const Text("Qty: ",
@@ -538,7 +643,7 @@ class CartScreenState extends ConsumerState<CartScreen> {
                             icon: const Icon(Icons.remove_circle_outline, color: Colors.red),
                             onPressed: () {
                               if (quantity > 1) {
-                                _saveQuantity(product.productId!, quantity - 1);
+                                _saveQuantity(cartItemKey, quantity - 1);
                               }
                             },
                           ),
@@ -548,7 +653,7 @@ class CartScreenState extends ConsumerState<CartScreen> {
                             icon: const Icon(Icons.add_circle_outline, color: Colors.green),
                             onPressed: quantity < maxLimit
                                 ? () {
-                              _saveQuantity(product.productId!, quantity + 1);
+                              _saveQuantity(cartItemKey, quantity + 1);
                             }
                                 : () {
                               ScaffoldMessenger.of(context).showSnackBar(
@@ -569,9 +674,7 @@ class CartScreenState extends ConsumerState<CartScreen> {
                             style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(width: 5),
-                          Text("₹${product.price}",
-                              style: const TextStyle(
-                                  fontSize: 14, fontWeight: FontWeight.bold)),
+                          
                         ],
                       ),
                     ],
@@ -585,7 +688,7 @@ class CartScreenState extends ConsumerState<CartScreen> {
               children: [
                 TextButton.icon(
                   onPressed: () async {
-                    await _removeFromCart(product.productId!);
+                    await _removeFromCart(cartItemKey);
                   },
                   icon: const Icon(Icons.delete_outline, color: Colors.black54),
                   label: const Text("Remove", style: TextStyle(color: Colors.black54)),
@@ -602,15 +705,22 @@ class CartScreenState extends ConsumerState<CartScreen> {
     );
   }
 
-  Future<void> _removeFromCart(String productId) async {
+  // UPDATED: Remove from cart using composite key
+  Future<void> _removeFromCart(String cartItemKey) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    cartProductIds.remove(productId);
-    await prefs.setStringList('cartItems', cartProductIds);
+    cartItemKeys.remove(cartItemKey);
+    await prefs.setStringList('cartItems', cartItemKeys);
 
-    // Update the cart product list immediately
-    cartProducts.removeWhere((product) => product.productId == productId);
+    // Remove from local lists
+    cartProducts.removeWhere((product) => "${product.productId}_${product.distributorId}" == cartItemKey);
+    productSelections.remove(cartItemKey);
+    productQuantities.remove(cartItemKey);
+    selectedCartItemKeys.remove(cartItemKey);
 
-    // Show SnackBar message
+    // Clean up SharedPreferences
+    await prefs.remove('selected_$cartItemKey');
+    await prefs.remove('quantity_$cartItemKey');
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: const Text(

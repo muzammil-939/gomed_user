@@ -55,18 +55,28 @@ class GetproductModel {
 class Data {
   String? sId;
   UserId? userId;
+  String? otp;
+  double? totalPrice;
+  double? paidPrice;
+  String? type;
   List<ProductIds>? productIds;
   String? location;
   String? address;
+  String? status;
   String? createdAt;
   String? updatedAt;
 
   Data({
-    this.sId,
+     this.sId,
     this.userId,
+    this.otp,
+    this.totalPrice,
+    this.paidPrice,
+    this.type,
     this.productIds,
     this.location,
     this.address,
+    this.status,
     this.createdAt,
     this.updatedAt,
   });
@@ -74,18 +84,28 @@ class Data {
   Data copyWith({
     String? sId,
     UserId? userId,
+    String? otp,
+    double? totalPrice,
+    double? paidPrice,
+    String? type,
     List<ProductIds>? productIds,
     String? location,
     String? address,
+    String? status,
     String? createdAt,
     String? updatedAt,
   }) {
     return Data(
       sId: sId ?? this.sId,
       userId: userId ?? this.userId,
+      otp: otp ?? this.otp,
+      totalPrice: totalPrice ?? this.totalPrice,
+      paidPrice: paidPrice ?? this.paidPrice,
+      type: type ?? this.type,
       productIds: productIds ?? this.productIds,
       location: location ?? this.location,
       address: address ?? this.address,
+      status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -93,19 +113,28 @@ class Data {
 
   factory Data.initial() {
     return Data(
-      sId: '',
-      userId: UserId.initial(),
-      productIds: [],
-      location: '',
-      address: '',
-      createdAt: '',
-      updatedAt: '',
+       sId: '',
+        userId: UserId.initial(),
+        otp: '',
+        totalPrice: 0.0,
+        paidPrice: null,
+        type: '',
+        productIds: [],
+        location: '',
+        address: '',
+        status: '',
+        createdAt: '',
+        updatedAt: '',
     );
   }
 
   Data.fromJson(Map<String, dynamic> json) {
     sId = json['_id'];
     userId = json['userId'] != null ? UserId.fromJson(json['userId']) : null;
+    otp = json['Otp'];
+    totalPrice =(json['totalPrice'] ?? 0).toDouble();
+    paidPrice = json['paidPrice'] != null ? (json['paidPrice'] as num).toDouble() : null;
+    type = json['type'];
     if (json['productIds'] != null) {
       productIds = <ProductIds>[];
       json['productIds'].forEach((v) {
@@ -114,21 +143,30 @@ class Data {
     }
     location = json['location'];
     address = json['address'];
+    status = json['status'];
     createdAt = json['createdAt'];
     updatedAt = json['updatedAt'];
+    
+;
   }
 
   Map<String, dynamic> toJson() {
-    final data = <String, dynamic>{};
+    final Map<String, dynamic> data = {};
     data['_id'] = sId;
     if (userId != null) data['userId'] = userId!.toJson();
+    data['Otp'] = otp;
+    data['totalPrice'] = totalPrice;
+    data['paidPrice'] = paidPrice;
+    data['type'] = type;
     if (productIds != null) {
       data['productIds'] = productIds!.map((v) => v.toJson()).toList();
     }
     data['location'] = location;
     data['address'] = address;
+    data['status'] = status;
     data['createdAt'] = createdAt;
     data['updatedAt'] = updatedAt;
+    
     return data;
   }
 }
@@ -187,92 +225,118 @@ class UserId {
 }
 class ProductIds {
   String? sId;
-  int? quantity;
   String? productName;
   String? productDescription;
   int? price;
-  String? category;
-  List<String>? productImages;
-  DistributorId? distributorId;
+  int? quantity;
+  double? userPrice;
   String? bookingStatus;
+  String? category;
+  String? spareParts;
+  List<String>? productImages;
+  int? availableStock;
+  DistributorId? distributorId;
 
   ProductIds({
     this.sId,
-    this.quantity,
     this.productName,
     this.productDescription,
     this.price,
-    this.category,
-    this.productImages,
-    this.distributorId,
+    this.quantity,
+    this.userPrice,
     this.bookingStatus,
+    this.category,
+    this.spareParts,
+    this.productImages,
+    this.availableStock,
+    this.distributorId,
   });
 
-  ProductIds copyWith({
+   ProductIds copyWith({
     String? sId,
-    int? quantity,
     String? productName,
     String? productDescription,
     int? price,
-    String? category,
-    List<String>? productImages,
-    DistributorId? distributorId,
+    int? quantity,
+    double? userPrice,
     String? bookingStatus,
+    String? category,
+    String? spareParts,
+    List<String>? productImages,
+    int? availableStock,
+    DistributorId? distributorId,
   }) {
     return ProductIds(
       sId: sId ?? this.sId,
-      quantity: quantity ?? this.quantity,
       productName: productName ?? this.productName,
       productDescription: productDescription ?? this.productDescription,
       price: price ?? this.price,
-      category: category ?? this.category,
-      productImages: productImages ?? this.productImages,
-      distributorId: distributorId ?? this.distributorId,
+      quantity: quantity ?? this.quantity,
+      userPrice: userPrice ?? this.userPrice,
       bookingStatus: bookingStatus ?? this.bookingStatus,
+      category: category ?? this.category,
+      spareParts: spareParts ?? this.spareParts,
+      productImages: productImages ?? this.productImages,
+      availableStock: availableStock ?? this.availableStock,
+      distributorId: distributorId ?? this.distributorId,
     );
   }
 
-  factory ProductIds.initial() {
-    return ProductIds(
-      sId: '',
-      quantity: 0,
-      productName: '',
-      productDescription: '',
-      price: 0,
-      category: '',
-      productImages: [],
-      distributorId: DistributorId.initial(),
-      bookingStatus: '',
-    );
-  }
+
+  factory ProductIds.initial() => ProductIds(
+        sId: '',
+        productName: '',
+        productDescription: '',
+        price: 0,
+        quantity: 0,
+        userPrice: 0.0,
+        bookingStatus: '',
+        category: '',
+        spareParts: '',
+        productImages: [],
+        availableStock: 0,
+        distributorId: DistributorId.initial(),
+      );
 
   ProductIds.fromJson(Map<String, dynamic> json) {
     sId = json['_id'];
-    quantity = json['quantity'];
     productName = json['productName'];
     productDescription = json['productDescription'];
     price = json['price'];
+    quantity = json['quantity'];
+    // userPrice = json['userPrice'];
+    userPrice = json['userPrice'] != null
+    ? (json['userPrice'] is int
+        ? (json['userPrice'] as int).toDouble()
+        : json['userPrice'])
+    : null;
+
+    bookingStatus = json['bookingStatus'];
     category = json['category'];
+    spareParts = json['spareParts'];
     productImages = json['productImages'].cast<String>();
+    availableStock = json['availableStock'];
     distributorId = json['distributorId'] != null
         ? DistributorId.fromJson(json['distributorId'])
         : null;
-    bookingStatus = json['bookingStatus'];
   }
 
   Map<String, dynamic> toJson() {
-    final data = <String, dynamic>{};
+    final Map<String, dynamic> data = {};
     data['_id'] = sId;
-    data['quantity'] = quantity;
     data['productName'] = productName;
     data['productDescription'] = productDescription;
     data['price'] = price;
+    data['quantity'] = quantity;
+    data['userPrice'] = userPrice;
+    data['bookingStatus'] = bookingStatus;
     data['category'] = category;
+    data['spareParts'] = spareParts;
     data['productImages'] = productImages;
+    data['availableStock'] = availableStock;
     if (distributorId != null) {
       data['distributorId'] = distributorId!.toJson();
     }
-    data['bookingStatus'] = bookingStatus;
     return data;
   }
 }

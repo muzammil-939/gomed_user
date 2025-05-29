@@ -267,10 +267,13 @@ if (selectedImage != null) {
       await auth.verifyPhoneNumber(
         phoneNumber: phoneNumber,
         verificationCompleted: (PhoneAuthCredential credential) async {
-          // loader.state = false;
-          await auth.signInWithCredential(credential);
-          _showSnackBar(context, "Phone number automatically verified", Colors.green);
-
+          try {
+            await auth.signInWithCredential(credential);
+            _showSnackBar(context, "Phone number automatically verified", Colors.green);
+          } catch (e) {
+            print("Error during automatic sign-in: $e");
+            _showSnackBar(context, "Auto sign-in failed: $e", Colors.red);
+          }
         },
 
         verificationFailed: (FirebaseAuthException e) {
@@ -358,14 +361,18 @@ if (selectedImage != null) {
       });
 
       loadingState.state = false;
-    } catch (e) {
+    } catch (e,stack) {
       loadingState.state = false;
-      print("Error during phone verification: $e");
+      print("Error during phoneee verification: $e");
+       print("🔥 Error after signInWithCredential: $e");
+        print("🔥 Stack trace: $stack");
     
     } finally {
       loadingState.state = false;
     }
   }
+
+
   Future<void> sendPhoneNumberAndRoleToAPI({
     required String phoneNumber,
     required String role,

@@ -24,8 +24,10 @@ class _BookingsPageState extends ConsumerState<BookingsPage> {
         return 1;
       case 'confirmed':
         return 2;
-      case 'completed':
+      case 'startDelivery':
         return 3;
+      case 'completed': 
+        return 4;
       default:
         return 1;
     }
@@ -104,6 +106,11 @@ class _BookingsPageState extends ConsumerState<BookingsPage> {
                       builder: (_) => OrderTrackingPage(
                         bookingId: booking.sId ?? '',
                         bookingDate: booking.createdAt ?? '',
+                         // PASSING BOOKING-LEVEL FIELDS TO EACH PRODUCT
+                            totalPrice: booking.totalPrice ?? 0.0,
+                            type: booking.type ?? '',
+                            paidPrice: booking.paidPrice ?? 0,
+                            otp: booking.otp ?? '',
                         products: booking.productIds?.map((product) {
                           return BookedProduct(
                             productId: product.sId ?? '',
@@ -112,7 +119,13 @@ class _BookingsPageState extends ConsumerState<BookingsPage> {
                             quantity: product.quantity ?? 0,
                             bookingStatus: product.bookingStatus ?? '',
                             currentStep: getCurrentStep(product.bookingStatus ?? ''),
+                            userPrice: product.userPrice ?? 0.0,
+
+                           
+                            distributorid :product.distributorId!.sId ?? ""
+                            
                           );
+
                         }).toList() ?? [],
                       ),
                     ));
@@ -123,6 +136,18 @@ class _BookingsPageState extends ConsumerState<BookingsPage> {
                   ),
                   child: const Text('View Details', style: TextStyle(color: Colors.black)),
                 ),
+
+              ],
+            ),
+
+
+
+          ],
+        ),
+      ),
+    );
+  }
+} 
       //            if ((booking.productIds?.any((p) => p.bookingStatus?.toLowerCase() == 'pending') ?? false))
       //           ElevatedButton(
       //             onPressed: () => _showCancelConfirmationDialog(context, booking.sId ?? '', booking.productIds!.first.sId ?? ''),
@@ -141,13 +166,7 @@ class _BookingsPageState extends ConsumerState<BookingsPage> {
       //   ),
       //   child: const Text('Cancel', style: TextStyle(color: Colors.orange)),
       // )
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+      
 
   // void _showCancelConfirmationDialog(BuildContext context, String bookingId , String productId) {
   //   showDialog(
@@ -178,4 +197,4 @@ class _BookingsPageState extends ConsumerState<BookingsPage> {
   //     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to cancel booking')));
   //   }
   // }
-}
+

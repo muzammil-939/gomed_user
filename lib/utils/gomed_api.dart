@@ -11,6 +11,7 @@ class Bbapi {
   static const String createbooking ="$baseUrl/productbooking/Create";
   static const String servicebooking ="$baseUrl/servicebooking/create";
   static const String getproductbooking ="$baseUrl/productbooking/list";
+  static const String updateproductbooking ="$baseUrl/productbooking/update";
   static const String cancelbooking ="$baseUrl/productbooking/delete";
   static const String getBookedServices ="$baseUrl/servicebooking/list";
   static const String cancelbookedservices ="$baseUrl/servicebooking/delete";

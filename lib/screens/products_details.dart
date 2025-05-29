@@ -35,36 +35,40 @@ class _ProductsDetailsState extends ConsumerState<ProductsDetails> {
     }
   }
 
-  Future<void> _checkCartStatus() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    List<String> cartItems = prefs.getStringList('cartItems') ?? [];
-    setState(() {
-      _isInCart = cartItems.contains(widget.product.productId);
-    });
-  }
+ Future<void> _checkCartStatus() async {
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+  List<String> cartItems = prefs.getStringList('cartItems') ?? [];
+
+  String cartKey = "${widget.product.productId}_${widget.product.distributorId}";
+  setState(() {
+    _isInCart = cartItems.contains(cartKey);
+  });
+}
+
 
   Future<void> _addToCart() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    List<String> cartItems = prefs.getStringList('cartItems') ?? [];
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+  List<String> cartItems = prefs.getStringList('cartItems') ?? [];
 
-    if (!cartItems.contains(widget.product.productId)) {
-      cartItems.add(widget.product.productId ?? '');
-      await prefs.setStringList('cartItems', cartItems);
+  String cartKey = "${widget.product.productId}_${widget.product.distributorId}";
 
-      setState(() {
-        _isInCart = true;
-      });
-      widget.updateCartCount();
+  if (!cartItems.contains(cartKey)) {
+    cartItems.add(cartKey);
+    await prefs.setStringList('cartItems', cartItems);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Item added in cart"),
-          duration: Duration(seconds: 2),
-        ),
-      );
-    }
+    setState(() {
+      _isInCart = true;
+    });
+    widget.updateCartCount();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Item added in cart"),
+        duration: Duration(seconds: 2),
+      ),
+    );
   }
-
+}
   void _filterSimilarProducts() {
     final allProducts = ref.read(productProvider).data ?? [];
     final currentCategory = widget.product.categoryName?.trim().toLowerCase();

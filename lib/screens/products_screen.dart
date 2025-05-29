@@ -19,43 +19,62 @@ class ProductsScreen extends ConsumerStatefulWidget {
 class ProductsScreenState extends ConsumerState<ProductsScreen> with TickerProviderStateMixin {
   final ScrollController _scrollController = ScrollController();
   final FocusNode _searchFocusNode = FocusNode();
-   TabController? _tabController;
-   final TextEditingController _searchController = TextEditingController();
-   String _searchQuery = "";
-
-   int cartItemCount = 0; // To track cart count
-
+  TabController? _tabController;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = "";
+  
+  int cartItemCount = 0;
+  bool _isInitialized = false;
+  List<String> _categories = [];
 
   @override
   void initState() {
     super.initState();
+    _loadCartItemCount();
+    
+    // Initialize products and setup TabController
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // final productState = ref.watch(productProvider);
-      // final categories = productState.data?.map((p) => p.category).toSet().toList() ?? [];
-      ref.read(productProvider.notifier).fetchProducts().then((_){
-       
-      _initializeTabController();
+      _initializeData();
     });
-    loadCartItemCount();
-     });
-
   }
-  void _onCategorySelected(String category) {
-  setState(() {
-    _tabController?.index = _tabController!.length > 0 ? _tabController!.index : 0;
-  });
-}
 
+  Future<void> _initializeData() async {
+    try {
+      await ref.read(productProvider.notifier).fetchProducts();
+      if (mounted) {
+        _setupCategories();
+      }
+    } catch (e) {
+      print('Error initializing data: $e');
+    }
+  }
 
-   // Method to initialize the TabController
- void _initializeTabController() {
-    final productState = ref.watch(productProvider);
-   List<String> categories = ["ALL"]; // Start with "ALL" tab
-    categories.addAll(productState.data?.map((p) => p.categoryName).whereType<String>().toSet().toList() ?? []);
+  void _setupCategories() {
+    final productState = ref.read(productProvider);
+    
+    if (productState.data != null) {
+      setState(() {
+        _categories = ["ALL"];
+        _categories.addAll(
+          productState.data!
+              .map((p) => p.categoryName)
+              .whereType<String>()
+              .toSet()
+              .toList()
+        );
+        
+        _initializeTabController();
+        _isInitialized = true;
+      });
+    }
+  }
 
-    int initialIndex = categories.indexOf(widget.selectedCategory); // Find selected category index
+  void _initializeTabController() {
+    _tabController?.dispose(); // Dispose previous controller
+    
+    int initialIndex = _categories.indexOf(widget.selectedCategory);
     _tabController = TabController(
-      length: categories.length,
+      length: _categories.length,
       vsync: this,
       initialIndex: initialIndex >= 0 ? initialIndex : 0,
     );
@@ -66,143 +85,86 @@ class ProductsScreenState extends ConsumerState<ProductsScreen> with TickerProvi
     _scrollController.dispose();
     _searchFocusNode.dispose();
     _tabController?.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
-  // Load cart item count from SharedPreferences
-  Future<void> loadCartItemCount() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    List<String> cartItems = prefs.getStringList('cartItems') ?? [];
-    setState(() {
-      cartItemCount = cartItems.length;
-    });
+  Future<void> _loadCartItemCount() async {
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      List<String> cartItems = prefs.getStringList('cartItems') ?? [];
+      if (mounted) {
+        setState(() {
+          cartItemCount = cartItems.length;
+        });
+      }
+    } catch (e) {
+      print('Error loading cart count: $e');
+    }
   }
 
   void _updateCartCount() {
-    loadCartItemCount(); // Recalculate and setState
+    _loadCartItemCount();
+  }
+
+  void _onSearchChanged(String value) {
+    setState(() {
+      _searchQuery = value.toLowerCase();
+    });
+  }
+
+  void _clearSearch() {
+    setState(() {
+      _searchController.clear();
+      _searchQuery = "";
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-        
     final productState = ref.watch(productProvider);
     
-   List<String> categories = ["ALL"];
-    categories.addAll(productState.data
-    ?.map((p) => p.categoryName)
-    .whereType<String>()
-    .where((c) => c.toLowerCase().contains(_searchQuery)) // 🔍 Filter categories
-    .toSet()
-    .toList() ?? []);
-
-
-
-//      final productState = ref.watch(productProvider);
-// List<String> categories = ["ALL"]; // Start with "ALL" tab
-
-// productState.whenData((products) {
-//   final extractedCategories = products
-//       .expand((product) => product.data ?? []) // Extract `data` list from each `ProductModel`
-//       .map((data) => data.category) // Extract category
-//       .whereType<String>() // Ensure only valid Strings
-//       .toSet()
-//       .toList();
-
-//   categories.addAll(extractedCategories);
-// });
-
-
-   // Ensure TabController gets updated and selects the correct tab
-    if (_tabController == null || _tabController!.length != categories.length) {
-      int initialIndex =
-          categories.indexOf(widget.selectedCategory); // Find selected category
-      _tabController = TabController(
-        length: categories.length,
-        vsync: this,
-        initialIndex: initialIndex >= 0 ? initialIndex : 0,
+    if (!_isInitialized || _tabController == null) {
+      return Scaffold(
+        appBar: _buildAppBar(),
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
 
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF1BA4CA),
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () {
-            Navigator.push(context, MaterialPageRoute(builder: (context) => const HomePage()));
-          },
-        ),
-        title: _buildSearchBar(),
-         actions: [
-          Stack(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.shopping_cart, color: Colors.white),
-                onPressed: () async {
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const CartScreen()),
-                  );
-                  
-                    await loadCartItemCount();
-                    setState(() {});  // ✅ Refresh UI after cart update
-
-                  
-                },
-              ),
-              if (cartItemCount > 0)
-                Positioned(
-                  right: 6,
-                  top: 12,
-                  child: Container(
-                    padding: const EdgeInsets.all(3),
-                    decoration: BoxDecoration(
-                      color: Colors.red,
-                      borderRadius: BorderRadius.circular(25),
-                    ),
-                    constraints: const BoxConstraints(minWidth: 10, minHeight: 10),
-                    child: Text(
-                      '$cartItemCount',
-                      style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ],
-      ),
-      body: categories.isEmpty || _tabController == null
-          ? const Center(child: CircularProgressIndicator()) // Show loading indicator until data is available
-      : Column(
+      appBar: _buildAppBar(),
+      body: Column(
         children: [
-          // const SizedBox(height: 5,),
-          // _buildFilterButtonsRow(),
-          const SizedBox(height: 5,),
-          Container(
-            color: Colors.white,
-            child: TabBar(
-              controller: _tabController,
-              indicatorColor: Colors.orange,
-              labelColor: Colors.orange,
-              unselectedLabelColor: Colors.grey,
-              onTap: (index) => _onCategorySelected(categories[index]),
-              isScrollable: true, // Ensures all tabs fit properly
-              tabs: categories.map((category) => Tab(text: category)).toList(),
-            ),
-          ),
+          const SizedBox(height: 5),
+          _buildTabBar(),
           Expanded(
             child: TabBarView(
               controller: _tabController,
-              children: categories.map((category) => 
-                   _buildCategoryContent(category, _updateCartCount)
-                     ).toList(),
-
+              children: _categories.map((category) => 
+                _buildCategoryContent(category, _updateCartCount)
+              ).toList(),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  PreferredSizeWidget _buildAppBar() {
+    return AppBar(
+      backgroundColor: const Color(0xFF1BA4CA),
+      elevation: 0,
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back, color: Colors.white),
+        onPressed: () {
+          Navigator.pushReplacement(
+            context, 
+            MaterialPageRoute(builder: (context) => const HomePage())
+          );
+        },
+      ),
+      title: _buildSearchBar(),
+      actions: [_buildCartButton()],
     );
   }
 
@@ -224,23 +186,14 @@ class ProductsScreenState extends ConsumerState<ProductsScreen> with TickerProvi
                 hintText: "Search Products & Categories",
                 border: InputBorder.none,
               ),
-              onChanged: (value) {
-              setState(() {
-                _searchQuery = value.toLowerCase();
-              });
-            },
+              onChanged: _onSearchChanged,
             ),
           ),
-           if (_searchQuery.isNotEmpty) 
-          IconButton(
-            icon: const Icon(Icons.close, color: Colors.grey),
-            onPressed: () {
-              setState(() {
-                _searchController.clear();
-                _searchQuery = "";
-              });
-            },
-          ),
+          if (_searchQuery.isNotEmpty) 
+            IconButton(
+              icon: const Icon(Icons.close, color: Colors.grey),
+              onPressed: _clearSearch,
+            ),
           const Icon(Icons.mic, color: Colors.grey),
           const Icon(Icons.image, color: Colors.grey),
         ],
@@ -248,219 +201,918 @@ class ProductsScreenState extends ConsumerState<ProductsScreen> with TickerProvi
     );
   }
 
- Widget _buildCategoryContent(String category, VoidCallback updateCartCount ) {
-  final productState = ref.watch(productProvider);
-   final allProducts = productState.data ?? [];
+  Widget _buildCartButton() {
+    return Stack(
+      children: [
+        IconButton(
+          icon: const Icon(Icons.shopping_cart, color: Colors.white),
+          onPressed: () async {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const CartScreen()),
+            );
+            _updateCartCount();
+          },
+        ),
+        if (cartItemCount > 0)
+          Positioned(
+            right: 6,
+            top: 12,
+            child: Container(
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                color: Colors.red,
+                borderRadius: BorderRadius.circular(25),
+              ),
+              constraints: const BoxConstraints(minWidth: 10, minHeight: 10),
+              child: Text(
+                '$cartItemCount',
+                style: const TextStyle(
+                  color: Colors.white, 
+                  fontSize: 11, 
+                  fontWeight: FontWeight.bold
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
 
-  // Apply category filter
-  // final filteredProducts = category == "ALL"
-  //     ? allProducts
-  //     : allProducts.where((p) => p.categoryName == category).toList();
+  Widget _buildTabBar() {
+    return Container(
+      color: Colors.white,
+      child: TabBar(
+        controller: _tabController,
+        indicatorColor: Colors.orange,
+        labelColor: Colors.orange,
+        unselectedLabelColor: Colors.grey,
+        isScrollable: true,
+        tabs: _categories.map((category) => Tab(text: category)).toList(),
+      ),
+    );
+  }
 
-        final filteredProducts = allProducts.where((p) {
-        final matchesCategory = category == "ALL" || p.categoryName == category;
-        final isTopLevel = p.parentId == null; // Only show top-level products
-        return matchesCategory && isTopLevel;
-            }).toList();
+  Widget _buildCategoryContent(String category, VoidCallback updateCartCount) {
+    final productState = ref.watch(productProvider);
+    final allProducts = productState.data ?? [];
 
+    // Filter products by category
+    final filteredProducts = allProducts.where((p) {
+      final matchesCategory = category == "ALL" || p.categoryName == category;
+      final isTopLevel = p.parentId == null;
+      return matchesCategory && isTopLevel;
+    }).toList();
 
-        final searchedProducts = filteredProducts.where((p) =>
-      (p.productName != null && p.productName!.toLowerCase().contains(_searchQuery)) ||
-      (p.categoryName != null && p.categoryName!.toLowerCase().contains(_searchQuery))
+    // Apply search filter
+    final searchedProducts = filteredProducts.where((p) =>
+      _searchQuery.isEmpty ||
+      (p.productName?.toLowerCase().contains(_searchQuery) ?? false) ||
+      (p.categoryName?.toLowerCase().contains(_searchQuery) ?? false)
     ).toList();
 
-  return GridView.builder(
-    shrinkWrap: true,
-    physics: const AlwaysScrollableScrollPhysics(),  // ✅ Allows scrolling inside TabBarView
-    padding: const EdgeInsets.all(10),
-    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-      crossAxisCount: 2,
-      childAspectRatio: 0.7,
-      crossAxisSpacing: 10,
-      mainAxisSpacing: 10,
-    ),
-    itemCount: searchedProducts.length,
-    itemBuilder: (context, index) => _buildProductCard(searchedProducts[index], updateCartCount),
-  );
-}
+    if (searchedProducts.isEmpty) {
+      return const Center(
+        child: Text(
+          'No products found',
+          style: TextStyle(fontSize: 16, color: Colors.grey),
+        ),
+      );
+    }
 
+    return GridView.builder(
+      padding: const EdgeInsets.all(10),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 0.75, // Increased from 0.7 to give more height
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
+      ),
+      itemCount: searchedProducts.length,
+      itemBuilder: (context, index) => 
+        _buildProductCard(searchedProducts[index], updateCartCount),
+    );
+  }
 
-Widget _buildProductCard(Data product, VoidCallback updateCartCount) {
+ // 2. Update _buildProductCard to check for specific distributor combination
+  Widget _buildProductCard(Data product, VoidCallback updateCartCount) {
   return FutureBuilder<List<String>>(
-    future: _getCartItems(), // Fetch cart items
+    future: _getCartItems(),
     builder: (context, snapshot) {
-      bool isInCart = snapshot.hasData && snapshot.data!.contains(product.productId);
+      // Create the same composite key to check if this specific product-distributor combo is in cart
+      String cartItemKey = "${product.productId}_${product.distributorId}";
+      bool isInCart = snapshot.hasData && 
+                     snapshot.data!.contains(cartItemKey);
 
-      return LayoutBuilder(
-        builder: (context, constraints) {
-          final screenWidth = MediaQuery.of(context).size.width;
-
-          // String truncatedName = product.productName != null && product.productName!.length > 10
-          //     ? "${product.productName!.substring(0, 10)}..."
-          //     : product.productName ?? '';
-          String name = product.productName ?? '';
-          String truncatedName = name.length > 10 ? "${name.substring(0, 10)}..." : name;
-
-
-          // String truncatedDescription = product.productDescription != null && product.productDescription!.length > 20
-          //     ? "${product.productDescription!.substring(0, 20)}..."
-          //     : product.productDescription ?? '';
-
-          
-           String descriptionName = product.productDescription  ?? '';
-            String truncatedDescription = descriptionName.length > 10 ? "${descriptionName.substring(0, 10)}..." : descriptionName;
-
-            
-          return GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                 builder: (context)=>ProductsDetails(product:product, updateCartCount: updateCartCount)
-                 ),
-               ).then((_){
-                  updateCartCount();
-               }); 
-              },
-            child: Card(
-
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              elevation: 3,
-              
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
+      return Card(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        elevation: 3,
+        child: InkWell(
+          onTap: () => _navigateToProductDetails(product, updateCartCount),
+          borderRadius: BorderRadius.circular(10),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ClipRRect(
-                           borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
-                             child: Image.network(
-                            (product.productImages != null && product.productImages!.isNotEmpty)
-                            ? product.productImages!.first
-                             : '',
-                            // product.productImages!.isNotEmpty ? product.productImages!.first : '', // Get the first image from the list
-                              height: screenWidth * 0.3,
-                              width: double.infinity,
-                              fit: BoxFit.cover,
-                                 errorBuilder: (context, error, stackTrace) => const Icon(Icons.image, size: 120),
-                            ),
-                           ),
-                            Padding(
-                              padding: EdgeInsets.all(screenWidth * 0.02),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(truncatedName, style: const TextStyle(fontWeight: FontWeight.bold)),
-                                  Text(truncatedDescription, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.grey)),
-                                  Text(
-                                       "₹${(product.price! * 1.10).toStringAsFixed(2)}",
-                                        style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
-                                        ),
-                                  Text("${product.quantity}", style: const TextStyle(color: Color.fromARGB(255, 175, 76, 99), fontWeight: FontWeight.bold)),
-                                  //Text("${product.adminApproval}", style: const TextStyle(color: Color.fromARGB(255, 175, 76, 99), fontWeight: FontWeight.bold)),
-                                ],
-                              ),
-                            ),
-                   const Spacer(),
-                  Padding(
-                    padding: EdgeInsets.all(3),
-                    child: SizedBox(
-                       height: 30,
-                      width: double.infinity,          
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: isInCart ? Colors.orange : const Color(0xFF1BA4CA),
-                          minimumSize: const Size(double.infinity, 50),
-                        ),
-                        onPressed: () async {
-                          if (isInCart) {
-                            Navigator.push(context, MaterialPageRoute(builder: (context) => const CartScreen())
-                            ).then((_){
-                              updateCartCount();
-                            });
-                          } else {
-                            await _addToCart(product.productId!);
-                            updateCartCount();
-                            setState(() {}); // Refresh UI to update button
-                          }
-                        },
-                        child: Text(
-                          isInCart ? "Go to Cart" : "Add to Cart",
-                          style: const TextStyle(color: Colors.white, fontSize: 16),
-                        ),
+                  _buildProductImage(product, constraints.maxHeight * 0.45),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(6),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(child: _buildProductInfo(product)),
+                          _buildAddToCartButton(product, isInCart, updateCartCount),
+                        ],
                       ),
                     ),
                   ),
                 ],
-              ),
-            ),
-          
-          );
-        },
+              );
+            },
+          ),
+        ),
       );
     },
   );
 }
 
-// Fetch cart items from SharedPreferences
-      Future<List<String>> _getCartItems() async {
-        SharedPreferences prefs = await SharedPreferences.getInstance();
-        return prefs.getStringList('cartItems') ?? [];
-      }
 
-      // Function to store product ID in SharedPreferences
-      Future<void> _addToCart(String productId) async {
-        SharedPreferences prefs = await SharedPreferences.getInstance();
-        List<String> cartItems = prefs.getStringList('cartItems') ?? [];
+  Widget _buildProductImage(Data product, [double? height]) {
+    final imageHeight = height ?? 120.0; // Default height if not provided
+    
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
+      child: Image.network(
+        (product.productImages?.isNotEmpty ?? false) 
+          ? product.productImages!.first 
+          : '',
+        height: imageHeight,
+        width: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => 
+          Container(
+            height: imageHeight,
+            color: Colors.grey[200],
+            child: const Icon(Icons.image, size: 40, color: Colors.grey),
+          ),
+      ),
+    );
+  }
 
-        if (!cartItems.contains(productId)) {
-          cartItems.add(productId);
-          await prefs.setStringList('cartItems', cartItems);
-            setState(() {
-              cartItemCount = cartItems.length;
-            });
-            // ✅ Update cart count immediately
-          //await loadCartItemCount();
-          if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text(
-                    "Item added to cart",
-                    style: TextStyle(color: Colors.white),
-                  ),
-                  duration:  Duration(seconds: 2),
-                  backgroundColor: Colors.green,
-                ),
-              );
-            }
-          }
-          
-        }
+  Widget _buildProductInfo(Data product) {
+    String truncatedName = _truncateText(product.productName ?? '', 12);
+    String truncatedDescription = _truncateText(product.productDescription ?? '', 15);
 
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          truncatedName, 
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        const SizedBox(height: 2),
+        Text(
+          truncatedDescription, 
+          maxLines: 1, 
+          overflow: TextOverflow.ellipsis, 
+          style: const TextStyle(color: Colors.grey, fontSize: 10),
+        ),
+        const SizedBox(height: 4),
+        if (product.price != null)
+          Text(
+            "₹${(product.price! * 1.10).toStringAsFixed(2)}",
+            style: const TextStyle(
+              color: Colors.green, 
+              fontWeight: FontWeight.bold,
+              fontSize: 11,
+            ),
+          ),
+        Text(
+          "AvlQty: ${product.quantity ?? 0}", 
+          style: const TextStyle(
+            color: Color.fromARGB(255, 175, 76, 99), 
+            fontWeight: FontWeight.bold,
+            fontSize: 10,
+          ),
+        ),
+      ],
+    );
+  }
 
+  Widget _buildAddToCartButton(Data product, bool isInCart, VoidCallback updateCartCount) {
+    return SizedBox(
+      height: 32, // Fixed smaller height
+      width: double.infinity,
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: isInCart ? Colors.orange : const Color(0xFF1BA4CA),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+        ),
+        onPressed: () => _handleCartButtonPress(product, isInCart, updateCartCount),
+        child: Text(
+          isInCart ? "Go to Cart" : "Add to Cart",
+          style: const TextStyle(color: Colors.white, fontSize: 11),
+        ),
+      ),
+    );
+  }
 
-      //   Widget _buildFilterButtonsRow() {
-      //     return SingleChildScrollView(
-      //       scrollDirection: Axis.horizontal,
-      //       child: Row(
-      //         children: [
-      //           _buildFilterButton('Top Rated'),
-      //           _buildFilterButton('Customer Ratings'),
-      //           _buildFilterButton('F Assured'),
-      //         ],
-      //       ),
-      //     );
-      //   }
+  String _truncateText(String text, int maxLength) {
+    return text.length > maxLength 
+      ? "${text.substring(0, maxLength)}..." 
+      : text;
+  }
 
-      // Widget _buildFilterButton(String text) {
-      //   return Container(
-      //     margin: const EdgeInsets.symmetric(horizontal: 8.0),
-      //     padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      //     decoration: BoxDecoration(
-      //       color: Colors.grey[200],
-      //       borderRadius: BorderRadius.circular(16.0),
-      //       border: Border.all(color: Colors.grey[300]!),
-      //     ),
-      //     child: Text(text, style: const TextStyle(color: Colors.black)),
-      //   );
-      // }
+  Future<void> _navigateToProductDetails(Data product, VoidCallback updateCartCount) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ProductsDetails(
+          product: product, 
+          updateCartCount: updateCartCount
+        )
+      ),
+    );
+    updateCartCount();
+  }
+
+  // 3. Update _handleCartButtonPress to pass distributorId
+Future<void> _handleCartButtonPress(Data product, bool isInCart, VoidCallback updateCartCount) async {
+  if (isInCart) {
+    await Navigator.push(
+      context, 
+      MaterialPageRoute(builder: (context) => const CartScreen())
+    );
+    updateCartCount();
+  } else {
+    // Pass both productId and distributorId
+    await _addToCart(product.productId!, product.distributorId!);
+    updateCartCount();
+  }
 }
+
+  Future<List<String>> _getCartItems() async {
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      return prefs.getStringList('cartItems') ?? [];
+    } catch (e) {
+      print('Error getting cart items: $e');
+      return [];
+    }
+  }
+
+// 4. Additional helper method to get cart items for a specific product
+Future<bool> _isProductInCart(String productId, String distributorId) async {
+  try {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    List<String> cartItems = prefs.getStringList('cartItems') ?? [];
+    String cartItemKey = "${productId}_${distributorId}";
+    return cartItems.contains(cartItemKey);
+  } catch (e) {
+    print('Error checking cart: $e');
+    return false;
+  }
+}  
+
+  // 1. Update _addToCart method to include distributorId
+Future<void> _addToCart(String productId, String distributorId) async {
+  try {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    List<String> cartItems = prefs.getStringList('cartItems') ?? [];
+    
+    // Create composite key: productId_distributorId
+    String cartItemKey = "${productId}_${distributorId}";
+
+    if (!cartItems.contains(cartItemKey)) {
+      cartItems.add(cartItemKey);
+      await prefs.setStringList('cartItems', cartItems);
+      
+      if (mounted) {
+        setState(() {
+          cartItemCount = cartItems.length;
+        });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Item added to cart"),
+            duration: Duration(seconds: 2),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    }
+  } catch (e) {
+    print('Error adding to cart: $e');
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Error adding item to cart"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// import 'package:flutter/material.dart';
+// import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+// import 'package:gomed_user/model/product.dart';
+// import 'package:gomed_user/providers/products.dart';
+// import 'package:gomed_user/screens/cart_screen.dart';
+// import 'package:gomed_user/screens/home_page.dart';
+// import 'package:shared_preferences/shared_preferences.dart';
+// import "package:gomed_user/screens/products_details.dart";
+
+// class ProductsScreen extends ConsumerStatefulWidget {
+//   final String selectedCategory;
+//   const ProductsScreen({super.key, required this.selectedCategory});
+
+//   @override
+//   ProductsScreenState createState() => ProductsScreenState();
+// }
+
+// class ProductsScreenState extends ConsumerState<ProductsScreen> with TickerProviderStateMixin {
+//   final ScrollController _scrollController = ScrollController();
+//   final FocusNode _searchFocusNode = FocusNode();
+//   TabController? _tabController;
+//   final TextEditingController _searchController = TextEditingController();
+//   String _searchQuery = "";
+  
+//   int cartItemCount = 0;
+//   bool _isInitialized = false;
+//   List<String> _categories = [];
+
+//   @override
+//   void initState() {
+//     super.initState();
+//     _loadCartItemCount();
+    
+//     // Initialize products and setup TabController
+//     WidgetsBinding.instance.addPostFrameCallback((_) {
+//       _initializeData();
+//     });
+//   }
+
+//   Future<void> _initializeData() async {
+//     try {
+//       await ref.read(productProvider.notifier).fetchProducts();
+//       if (mounted) {
+//         _setupCategories();
+//       }
+//     } catch (e) {
+//       print('Error initializing data: $e');
+//     }
+//   }
+
+//   void _setupCategories() {
+//     final productState = ref.read(productProvider);
+    
+//     if (productState.data != null) {
+//       setState(() {
+//         _categories = ["ALL"];
+//         _categories.addAll(
+//           productState.data!
+//               .map((p) => p.categoryName)
+//               .whereType<String>()
+//               .toSet()
+//               .toList()
+//         );
+        
+//         _initializeTabController();
+//         _isInitialized = true;
+//       });
+//     }
+//   }
+
+//   void _initializeTabController() {
+//     _tabController?.dispose(); // Dispose previous controller
+    
+//     int initialIndex = _categories.indexOf(widget.selectedCategory);
+//     _tabController = TabController(
+//       length: _categories.length,
+//       vsync: this,
+//       initialIndex: initialIndex >= 0 ? initialIndex : 0,
+//     );
+//   }
+
+//   @override
+//   void dispose() {
+//     _scrollController.dispose();
+//     _searchFocusNode.dispose();
+//     _tabController?.dispose();
+//     _searchController.dispose();
+//     super.dispose();
+//   }
+
+//   Future<void> _loadCartItemCount() async {
+//     try {
+//       SharedPreferences prefs = await SharedPreferences.getInstance();
+//       List<String> cartItems = prefs.getStringList('cartItems') ?? [];
+//       if (mounted) {
+//         setState(() {
+//           cartItemCount = cartItems.length;
+//         });
+//       }
+//     } catch (e) {
+//       print('Error loading cart count: $e');
+//     }
+//   }
+
+//   void _updateCartCount() {
+//     _loadCartItemCount();
+//   }
+
+//   void _onSearchChanged(String value) {
+//     setState(() {
+//       _searchQuery = value.toLowerCase();
+//     });
+//   }
+
+//   void _clearSearch() {
+//     setState(() {
+//       _searchController.clear();
+//       _searchQuery = "";
+//     });
+//   }
+
+//   @override
+//   Widget build(BuildContext context) {
+//     final productState = ref.watch(productProvider);
+    
+//     if (!_isInitialized || _tabController == null) {
+//       return Scaffold(
+//         appBar: _buildAppBar(),
+//         body: const Center(child: CircularProgressIndicator()),
+//       );
+//     }
+
+//     return Scaffold(
+//       appBar: _buildAppBar(),
+//       body: Column(
+//         children: [
+//           const SizedBox(height: 5),
+//           _buildTabBar(),
+//           Expanded(
+//             child: TabBarView(
+//               controller: _tabController,
+//               children: _categories.map((category) => 
+//                 _buildCategoryContent(category, _updateCartCount)
+//               ).toList(),
+//             ),
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+
+//   PreferredSizeWidget _buildAppBar() {
+//     return AppBar(
+//       backgroundColor: const Color(0xFF1BA4CA),
+//       elevation: 0,
+//       leading: IconButton(
+//         icon: const Icon(Icons.arrow_back, color: Colors.white),
+//         onPressed: () {
+//           Navigator.pushReplacement(
+//             context, 
+//             MaterialPageRoute(builder: (context) => const HomePage())
+//           );
+//         },
+//       ),
+//       title: _buildSearchBar(),
+//       actions: [_buildCartButton()],
+//     );
+//   }
+
+//   Widget _buildSearchBar() {
+//     return Container(
+//       decoration: BoxDecoration(
+//         color: Colors.white,
+//         borderRadius: BorderRadius.circular(30),
+//       ),
+//       padding: const EdgeInsets.symmetric(horizontal: 16),
+//       child: Row(
+//         children: [
+//           const Icon(Icons.search, color: Colors.grey),
+//           Expanded(
+//             child: TextField(
+//               controller: _searchController,
+//               focusNode: _searchFocusNode,
+//               decoration: const InputDecoration(
+//                 hintText: "Search Products & Categories",
+//                 border: InputBorder.none,
+//               ),
+//               onChanged: _onSearchChanged,
+//             ),
+//           ),
+//           if (_searchQuery.isNotEmpty) 
+//             IconButton(
+//               icon: const Icon(Icons.close, color: Colors.grey),
+//               onPressed: _clearSearch,
+//             ),
+//           const Icon(Icons.mic, color: Colors.grey),
+//           const Icon(Icons.image, color: Colors.grey),
+//         ],
+//       ),
+//     );
+//   }
+
+//   Widget _buildCartButton() {
+//     return Stack(
+//       children: [
+//         IconButton(
+//           icon: const Icon(Icons.shopping_cart, color: Colors.white),
+//           onPressed: () async {
+//             await Navigator.push(
+//               context,
+//               MaterialPageRoute(builder: (context) => const CartScreen()),
+//             );
+//             _updateCartCount();
+//           },
+//         ),
+//         if (cartItemCount > 0)
+//           Positioned(
+//             right: 6,
+//             top: 12,
+//             child: Container(
+//               padding: const EdgeInsets.all(3),
+//               decoration: BoxDecoration(
+//                 color: Colors.red,
+//                 borderRadius: BorderRadius.circular(25),
+//               ),
+//               constraints: const BoxConstraints(minWidth: 10, minHeight: 10),
+//               child: Text(
+//                 '$cartItemCount',
+//                 style: const TextStyle(
+//                   color: Colors.white, 
+//                   fontSize: 11, 
+//                   fontWeight: FontWeight.bold
+//                 ),
+//                 textAlign: TextAlign.center,
+//               ),
+//             ),
+//           ),
+//       ],
+//     );
+//   }
+
+//   Widget _buildTabBar() {
+//     return Container(
+//       color: Colors.white,
+//       child: TabBar(
+//         controller: _tabController,
+//         indicatorColor: Colors.orange,
+//         labelColor: Colors.orange,
+//         unselectedLabelColor: Colors.grey,
+//         isScrollable: true,
+//         tabs: _categories.map((category) => Tab(text: category)).toList(),
+//       ),
+//     );
+//   }
+
+//   Widget _buildCategoryContent(String category, VoidCallback updateCartCount) {
+//     final productState = ref.watch(productProvider);
+//     final allProducts = productState.data ?? [];
+
+//     // Filter products by category
+//     final filteredProducts = allProducts.where((p) {
+//       final matchesCategory = category == "ALL" || p.categoryName == category;
+//       final isTopLevel = p.parentId == null;
+//       return matchesCategory && isTopLevel;
+//     }).toList();
+
+//     // Apply search filter
+//     final searchedProducts = filteredProducts.where((p) =>
+//       _searchQuery.isEmpty ||
+//       (p.productName?.toLowerCase().contains(_searchQuery) ?? false) ||
+//       (p.categoryName?.toLowerCase().contains(_searchQuery) ?? false)
+//     ).toList();
+
+//     if (searchedProducts.isEmpty) {
+//       return const Center(
+//         child: Text(
+//           'No products found',
+//           style: TextStyle(fontSize: 16, color: Colors.grey),
+//         ),
+//       );
+//     }
+
+//     return GridView.builder(
+//       padding: const EdgeInsets.all(10),
+//       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+//         crossAxisCount: 2,
+//         childAspectRatio: 0.75, // Increased from 0.7 to give more height
+//         crossAxisSpacing: 10,
+//         mainAxisSpacing: 10,
+//       ),
+//       itemCount: searchedProducts.length,
+//       itemBuilder: (context, index) => 
+//         _buildProductCard(searchedProducts[index], updateCartCount),
+//     );
+//   }
+
+//   Widget _buildProductCard(Data product, VoidCallback updateCartCount) {
+//     return FutureBuilder<List<String>>(
+//       future: _getCartItems(),
+//       builder: (context, snapshot) {
+//         bool isInCart = snapshot.hasData && 
+//                        snapshot.data!.contains(product.productId);
+
+//         return Card(
+//           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+//           elevation: 3,
+//           child: InkWell(
+//             onTap: () => _navigateToProductDetails(product, updateCartCount),
+//             borderRadius: BorderRadius.circular(10),
+//             child: LayoutBuilder(
+//               builder: (context, constraints) {
+//                 return Column(
+//                   crossAxisAlignment: CrossAxisAlignment.start,
+//                   children: [
+//                     _buildProductImage(product, constraints.maxHeight * 0.45), // 45% of card height
+//                     Expanded(
+//                       child: Padding(
+//                         padding: const EdgeInsets.all(6),
+//                         child: Column(
+//                           crossAxisAlignment: CrossAxisAlignment.start,
+//                           children: [
+//                             Expanded(child: _buildProductInfo(product)),
+//                             _buildAddToCartButton(product, isInCart, updateCartCount),
+//                           ],
+//                         ),
+//                       ),
+//                     ),
+//                   ],
+//                 );
+//               },
+//             ),
+//           ),
+//         );
+//       },
+//     );
+//   }
+
+//   Widget _buildProductImage(Data product, [double? height]) {
+//     final imageHeight = height ?? 120.0; // Default height if not provided
+    
+//     return ClipRRect(
+//       borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
+//       child: Image.network(
+//         (product.productImages?.isNotEmpty ?? false) 
+//           ? product.productImages!.first 
+//           : '',
+//         height: imageHeight,
+//         width: double.infinity,
+//         fit: BoxFit.cover,
+//         errorBuilder: (context, error, stackTrace) => 
+//           Container(
+//             height: imageHeight,
+//             color: Colors.grey[200],
+//             child: const Icon(Icons.image, size: 40, color: Colors.grey),
+//           ),
+//       ),
+//     );
+//   }
+
+//   Widget _buildProductInfo(Data product) {
+//     String truncatedName = _truncateText(product.productName ?? '', 12);
+//     String truncatedDescription = _truncateText(product.productDescription ?? '', 15);
+
+//     return Column(
+//       crossAxisAlignment: CrossAxisAlignment.start,
+//       mainAxisSize: MainAxisSize.min,
+//       children: [
+//         Text(
+//           truncatedName, 
+//           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+//           maxLines: 1,
+//           overflow: TextOverflow.ellipsis,
+//         ),
+//         const SizedBox(height: 2),
+//         Text(
+//           truncatedDescription, 
+//           maxLines: 1, 
+//           overflow: TextOverflow.ellipsis, 
+//           style: const TextStyle(color: Colors.grey, fontSize: 10),
+//         ),
+//         const SizedBox(height: 4),
+//         if (product.price != null)
+//           Text(
+//             "₹${(product.price! * 1.10).toStringAsFixed(2)}",
+//             style: const TextStyle(
+//               color: Colors.green, 
+//               fontWeight: FontWeight.bold,
+//               fontSize: 11,
+//             ),
+//           ),
+//         Text(
+//           "AvlQty: ${product.quantity ?? 0}", 
+//           style: const TextStyle(
+//             color: Color.fromARGB(255, 175, 76, 99), 
+//             fontWeight: FontWeight.bold,
+//             fontSize: 10,
+//           ),
+//         ),
+//       ],
+//     );
+//   }
+
+//   Widget _buildAddToCartButton(Data product, bool isInCart, VoidCallback updateCartCount) {
+//     return SizedBox(
+//       height: 32, // Fixed smaller height
+//       width: double.infinity,
+//       child: ElevatedButton(
+//         style: ElevatedButton.styleFrom(
+//           backgroundColor: isInCart ? Colors.orange : const Color(0xFF1BA4CA),
+//           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+//           padding: const EdgeInsets.symmetric(horizontal: 8),
+//         ),
+//         onPressed: () => _handleCartButtonPress(product, isInCart, updateCartCount),
+//         child: Text(
+//           isInCart ? "Go to Cart" : "Add to Cart",
+//           style: const TextStyle(color: Colors.white, fontSize: 11),
+//         ),
+//       ),
+//     );
+//   }
+
+//   String _truncateText(String text, int maxLength) {
+//     return text.length > maxLength 
+//       ? "${text.substring(0, maxLength)}..." 
+//       : text;
+//   }
+
+//   Future<void> _navigateToProductDetails(Data product, VoidCallback updateCartCount) async {
+//     await Navigator.push(
+//       context,
+//       MaterialPageRoute(
+//         builder: (context) => ProductsDetails(
+//           product: product, 
+//           updateCartCount: updateCartCount
+//         )
+//       ),
+//     );
+//     updateCartCount();
+//   }
+
+//   Future<void> _handleCartButtonPress(Data product, bool isInCart, VoidCallback updateCartCount) async {
+//     if (isInCart) {
+//       await Navigator.push(
+//         context, 
+//         MaterialPageRoute(builder: (context) => const CartScreen())
+//       );
+//       updateCartCount();
+//     } else {
+//       await _addToCart(product.productId!);
+//       updateCartCount();
+//     }
+//   }
+
+//   Future<List<String>> _getCartItems() async {
+//     try {
+//       SharedPreferences prefs = await SharedPreferences.getInstance();
+//       return prefs.getStringList('cartItems') ?? [];
+//     } catch (e) {
+//       print('Error getting cart items: $e');
+//       return [];
+//     }
+//   }
+
+//   Future<void> _addToCart(String productId) async {
+//     try {
+//       SharedPreferences prefs = await SharedPreferences.getInstance();
+//       List<String> cartItems = prefs.getStringList('cartItems') ?? [];
+
+//       if (!cartItems.contains(productId)) {
+//         cartItems.add(productId);
+//         await prefs.setStringList('cartItems', cartItems);
+        
+//         if (mounted) {
+//           setState(() {
+//             cartItemCount = cartItems.length;
+//           });
+          
+//           ScaffoldMessenger.of(context).showSnackBar(
+//             const SnackBar(
+//               content: Text("Item added to cart"),
+//               duration: Duration(seconds: 2),
+//               backgroundColor: Colors.green,
+//             ),
+//           );
+//         }
+//       }
+//     } catch (e) {
+//       print('Error adding to cart: $e');
+//       if (mounted) {
+//         ScaffoldMessenger.of(context).showSnackBar(
+//           const SnackBar(
+//             content: Text("Error adding item to cart"),
+//             backgroundColor: Colors.red,
+//           ),
+//         );
+//       }
+//     }
+//   }

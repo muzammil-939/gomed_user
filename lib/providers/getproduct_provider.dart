@@ -124,7 +124,10 @@ Future<void> createBooking({
     required List<Map<String, dynamic>> productIds,
     required String location,
     required String? address,
-    required String? bookingOtp,   
+    required String? bookingOtp,  
+     required String? paymentmethod,
+     required double? codAdvance,
+     required double? totalPrice
 
   }) async {
 print('inside create booking....$userId,$productIds,$location,$address');
@@ -152,13 +155,7 @@ print('inside create booking....$userId,$productIds,$location,$address');
         throw Exception("User token is invalid. Please log in again.");
       }
 
-      print('Retrieved Token: $token');
- List<String> extractedProductIds = productIds.map((product) => product['productId'].toString()).toList();
-    print('Extracted product IDs: $extractedProductIds');
-     List<String> extractedDistributorIds = productIds.map((product) => product['distributor_id'].toString()).toList();
-    print('Extracted distributor IDs: $extractedDistributorIds');
-         List<String> extractedPrice = productIds.map((product) => product['price'].toString()).toList();
-    print('Extracted price: $extractedPrice');
+
       // Initialize retry logic
       final client = RetryClient(
         http.Client(),
@@ -180,7 +177,10 @@ print('inside create booking....$userId,$productIds,$location,$address');
         "address": address ?? '',
         "status": "pending",
         "products": productIds,
-        "Otp" :bookingOtp
+        "Otp" :bookingOtp,
+        "paidPrice":codAdvance,
+        "type":paymentmethod,
+        "totalPrice":totalPrice
       };
 
        // Send POST request with JSON body
@@ -203,41 +203,7 @@ print('inside create booking....$userId,$productIds,$location,$address');
 
       if (response.statusCode == 201 || response.statusCode == 200) {
         final Map<String, dynamic> responseBody = jsonDecode(response.body);
-        final DatabaseReference dbRef = FirebaseDatabase.instance.ref().child('bookings');
-   // Create a new unique key
-
-    for (var product in productIds) {
-    final String distributorId = product['distributor_id'].toString();
-    final int totalprice = int.tryParse(product['price'].toString()) ?? 0;
-    final int quantity = int.tryParse(product['quantity'].toString()) ?? 1;
-    final int price = totalprice * quantity;
-    final DatabaseReference distributorRef = dbRef.child(distributorId);
-    
-
-    final DataSnapshot snapshot = await distributorRef.get();
-
-    if (snapshot.exists) {
-      // Add to existing wallet
-      final currentData = snapshot.value as Map;
-      final int currentWallet = int.tryParse(currentData['wallet'].toString()) ?? 0;
-      final int updatedWallet = currentWallet + price;
-
-      await distributorRef.update({
-        'wallet': updatedWallet,
-      });
-
-      print("Updated wallet for distributor $distributorId: $updatedWallet");
-    } else {
-      // Create new record
-      await distributorRef.set({
-        'distributor_id': distributorId,
-        'wallet': price,
-      });
-
-      print("Created new wallet record for distributor $distributorId: $price");
-    }
-  }
-       // state = GetproductModel.fromJson(responseBody);
+       
        print('booking products.....$responseBody');
         print("Booking created successfully!");
 
@@ -349,47 +315,53 @@ Future<void> getuserproduct() async {
   }
 }
 
-
-
-
-
-
-Future<bool> cancelBooking(String? bookingId, String productId) async {
-
-  final String apiUrl = "${Bbapi.cancelbooking}/$bookingId/$productId"; // Replace with actual API endpoint
+Future<bool> cancelBooking(String? bookingId, String productId, String distributorId) async {
+  final String apiUrl = "${Bbapi.updateproductbooking}/$bookingId";
   final loadingState = ref.read(loadingProvider.notifier);
   final loginprovider = ref.read(userProvider);
-    final token = loginprovider.data?[0].accessToken;
+  final token = loginprovider.data?[0].accessToken;
 
   try {
-    loadingState.state = true; // Show loading state
+    loadingState.state = true;
+
     if (token == null || token.isEmpty) {
       throw Exception("Authentication token missing.");
     }
-   final client = RetryClient(
+
+    final client = RetryClient(
       http.Client(),
       retries: 3,
       when: (response) => response.statusCode == 401 || response.statusCode == 400,
       onRetry: (req, res, retryCount) async {
         if (retryCount == 0 && (res?.statusCode == 401 || res?.statusCode == 400)) {
-          String? newAccessToken =
-              await ref.read(userProvider.notifier).restoreAccessToken();
+          String? newAccessToken = await ref.read(userProvider.notifier).restoreAccessToken();
           req.headers['Authorization'] = 'Bearer $newAccessToken';
         }
       },
     );
 
-    final response = await client.delete(
-      Uri.parse(apiUrl),
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer $token", // Include token
-      },
-    );
+    final request = http.Request("PATCH", Uri.parse(apiUrl));
+    request.headers.addAll({
+      "Content-Type": "application/json",
+      "Authorization": "Bearer $token",
+    });
+
+    request.body = jsonEncode({
+      "products": [
+        {
+          "distributorId": distributorId,
+          "productId": productId,
+          "bookingStatus": "cancelled", // You can also pass a variable here
+        }
+      ]
+    });
+
+    final streamedResponse = await client.send(request);
+    final response = await http.Response.fromStream(streamedResponse);
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       print("Booking successfully canceled.");
-       return true;
+      return true;
     } else {
       print("Failed to cancel booking. Status code: ${response.statusCode}");
       print("Response: ${response.body}");
@@ -399,9 +371,10 @@ Future<bool> cancelBooking(String? bookingId, String productId) async {
     print("Error while canceling booking: $e");
     return false;
   } finally {
-    loadingState.state = false; // Hide loading state
+    loadingState.state = false;
   }
 }
+
 
 
 }

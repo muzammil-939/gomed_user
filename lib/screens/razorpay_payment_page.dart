@@ -22,7 +22,7 @@ class RazorpayPaymentPage extends StatefulWidget {
 
 class _RazorpayPaymentPageState extends State<RazorpayPaymentPage> {
   late Razorpay _razorpay;
-
+ 
   @override
   void initState() {
     super.initState();
@@ -36,7 +36,7 @@ class _RazorpayPaymentPageState extends State<RazorpayPaymentPage> {
   void _startPayment() {
     var options = {
       'key': 'rzp_live_6tvrYJlTwFFGiV',
-      'amount': (widget.amount ).toInt(),
+      'amount': (widget.amount * 100).toInt(),
       'name': 'Gomed',
       'description': 'Product Booking',
       'prefill': {
