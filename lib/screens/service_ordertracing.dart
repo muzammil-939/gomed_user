@@ -8,6 +8,7 @@ class ServiceOrdertracing extends ConsumerStatefulWidget {
   final String serviceName;
   final String bookingDate;
   final String status;
+  final String servicedescription;
   final double price;
   final String serviceEngineerId;
   final String startOtp;
@@ -19,6 +20,7 @@ class ServiceOrdertracing extends ConsumerStatefulWidget {
     required this.serviceName,
     required this.bookingDate,
     required this.status,
+    required this.servicedescription,
     required this.price,
     required this.serviceEngineerId,
     required this.startOtp,
@@ -124,32 +126,36 @@ void initState() {
               ),
               const SizedBox(height: 8),
               Text(
-                'Service: ${widget.serviceName}',
+                'Service : ${widget.serviceName}',
                 style: TextStyle(fontSize: screenWidth * 0.045, fontWeight: FontWeight.bold),
               ),
-              Text(
-                'Add-On',
-                style: TextStyle(color: Colors.blue, fontSize: screenWidth * 0.035),
+              const SizedBox(height: 8),
+               Text(
+                'Description${widget.servicedescription}',
+                style: TextStyle(fontSize: screenWidth * 0.035),
               ),
-              Text(
-                'Date Time',
-                style: TextStyle(color: Colors.grey, fontSize: screenWidth * 0.035),
-              ),
+              // Text(
+              //   'Add-On',
+              //   style: TextStyle(color: Colors.blue, fontSize: screenWidth * 0.035),
+              // ),
               const SizedBox(height: 8),
               Text(
                 '₹ ${widget.price.toStringAsFixed(2)}',
                 style: TextStyle(fontSize: screenWidth * 0.045, fontWeight: FontWeight.bold),
               ),
+              const SizedBox(height: 8),
+              Text(
+                'Date:${widget.bookingDate}',
+                style: TextStyle(color: Colors.grey, fontSize: screenWidth * 0.035),
+              ),
+              const SizedBox(height: 8),
+              
               Text('Start OTP: ${widget.startOtp}',
                     style: TextStyle(fontWeight: FontWeight.bold),),
-              SizedBox(height: screenHeight * 0.02),
+              SizedBox(height: screenHeight * 0.015),
               Text('End OTP: ${widget.endOtp}',
                     style: TextStyle(fontWeight: FontWeight.bold),),
-              SizedBox(height: screenHeight * 0.02),
-              Text(
-                'Lorem ipsum dolor sit amet consectetur. Fusce dui consectetur aenean pellentesque tincidunt.',
-                style: TextStyle(fontSize: screenWidth * 0.035),
-              ),
+             
               SizedBox(height: screenHeight * 0.04),
 
               // Service Engineer Details as Cards

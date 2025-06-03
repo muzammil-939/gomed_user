@@ -1,3 +1,364 @@
+// import 'dart:async'; // Import to use Timer
+// import 'package:firebase_auth/firebase_auth.dart';
+// import 'package:flutter/material.dart';
+// import 'package:flutter_riverpod/flutter_riverpod.dart';
+// import 'package:gomed_user/providers/auth_state.dart';
+// import '../providers/firebase_auth.dart';
+// import '../providers/loader.dart';
+// import 'home_page.dart';
+// import 'package:gomed_user/model/auth.dart'; // Import the UserModel
+// import 'package:shared_preferences/shared_preferences.dart';
+// import 'dart:convert';
+// import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+
+// class LoginScreen extends ConsumerStatefulWidget {
+//   const LoginScreen({super.key});
+
+//   @override
+//   _LoginScreenState createState() => _LoginScreenState();
+// }
+
+// class _LoginScreenState extends ConsumerState<LoginScreen> {
+//   final TextEditingController phoneController = TextEditingController(text: "+91");
+//   final TextEditingController otpController = TextEditingController();
+//   bool isKeyboardVisible = false;
+//   bool isLoading = false; // To control loading state
+//   bool isOtpSending = false; // To control OTP sending state
+//   int countdown = 0; // Countdown timer for OTP
+//   Timer? _timer; // Timer object (nullable)
+//   String lastPhoneNumber = ""; // Store the last sent phone number
+
+//   @override
+//   void dispose() {
+//     _stopTimer(); // Stop timer when disposing
+//     phoneController.dispose();
+//     otpController.dispose();
+//     super.dispose();
+//   }
+
+//   void _stopTimer() {
+//     if (_timer != null && _timer!.isActive) {
+//       _timer!.cancel();
+//       _timer = null;
+//     }
+//   }
+
+//   void startOtpCountdown() {
+//     _stopTimer(); // Stop any existing timer first
+    
+//     setState(() {
+//       countdown = 60; // Start countdown at 60 seconds
+//     });
+
+//     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+//       if (mounted) { // Check if widget is still mounted
+//         setState(() {
+//           if (countdown > 0) {
+//             countdown--;
+//           } else {
+//             _stopTimer();
+//           }
+//         });
+//       } else {
+//         timer.cancel(); // Cancel if widget is not mounted
+//       }
+//     });
+//   }
+
+//   bool _isPhoneNumberValid(String phoneNumber) {
+//     return phoneNumber.startsWith("+91") &&
+//         phoneNumber.length == 13 &&
+//         RegExp(r'^[6-9]\d{9}$').hasMatch(phoneNumber.substring(3));
+//   }
+
+//   void _showSnackBar(String message, {Color backgroundColor = Colors.red}) {
+//     if (mounted) {
+//       ScaffoldMessenger.of(context).showSnackBar(
+//         SnackBar(
+//           content: Text(message),
+//           backgroundColor: backgroundColor,
+//         ),
+//       );
+//     }
+//   }
+
+//   Future<void> _sendOtp() async {
+//     String phoneNumber = phoneController.text.trim();
+    
+//     if (!_isPhoneNumberValid(phoneNumber)) {
+//       _showSnackBar('Please enter a valid 10-digit phone number.');
+//       return;
+//     }
+
+//     setState(() {
+//       isOtpSending = true;
+//       lastPhoneNumber = phoneNumber;
+//     });
+
+//     try {
+//       final phoneAuthNotifier = ref.read(userProvider.notifier);
+//       await phoneAuthNotifier.verifyPhoneNumber(phoneNumber, ref, context);
+//       startOtpCountdown(); // Start the countdown only after successful OTP send
+//       _showSnackBar('OTP sent successfully!', backgroundColor: Colors.green);
+//     } catch (e) {
+//       _showSnackBar('Failed to send OTP. Please try again.');
+//       setState(() {
+//         lastPhoneNumber = ""; // Reset on failure
+//       });
+//     } finally {
+//       if (mounted) {
+//         setState(() {
+//           isOtpSending = false;
+//         });
+//       }
+//     }
+//   }
+
+//   Future<void> _verifyOtp() async {
+//     String smsCode = otpController.text.trim();
+    
+//     if (smsCode.isEmpty) {
+//       _showSnackBar("Please enter the OTP.");
+//       return;
+//     }
+
+//     setState(() {
+//       isLoading = true;
+//     });
+
+//     try {
+//       await ref.read(userProvider.notifier).signInWithPhoneNumber(smsCode, ref);
+      
+//       // ✅ Stop the Timer immediately after successful verification
+//       _stopTimer();
+//       setState(() {
+//         countdown = 0;
+//       });
+
+//       _showSnackBar("OTP Verified Successfully!", backgroundColor: Colors.green);
+
+//       // Navigate to HomePage after a brief delay
+//       Future.delayed(const Duration(milliseconds: 500), () {
+//         if (mounted) {
+//           Navigator.pushReplacement(
+//             context,
+//             MaterialPageRoute(builder: (context) => const HomePage()),
+//           );
+//         }
+//       });
+
+//     } on FirebaseAuthException catch (e) {
+//       String errorMessage = 'Verification failed. Please try again.';
+//       if (e.code == 'invalid-verification-code') {
+//         errorMessage = 'The OTP you entered is incorrect.';
+//       } else if (e.code == 'session-expired') {
+//         errorMessage = 'OTP session expired. Please request a new one.';
+//         // Reset timer on session expiry
+//         _stopTimer();
+//         setState(() {
+//           countdown = 0;
+//           lastPhoneNumber = "";
+//         });
+//       }
+//       _showSnackBar(errorMessage);
+      
+//     } catch (e, stackTrace) {
+//       FirebaseCrashlytics.instance.recordError(
+//         e, 
+//         stackTrace, 
+//         reason: 'OTP verification error'
+//       );
+//       _showSnackBar("An error occurred: $e");
+      
+//     } finally {
+//       if (mounted) {
+//         setState(() {
+//           isLoading = false;
+//         });
+//       }
+//     }
+//   }
+
+//   @override
+//   Widget build(BuildContext context) {
+//     final authState = ref.watch(loadingProvider);
+
+//     return Scaffold(
+//       body: Container(
+//         color: Colors.white,
+//         alignment: Alignment.bottomCenter,
+//         child: SingleChildScrollView(
+//           child: Column(
+//             children: [
+//               Center(
+//                 child: Image.asset(
+//                   'assets/kiitm_final_out.jpg',
+//                   fit: BoxFit.contain,
+//                   width: MediaQuery.of(context).size.width * 0.8,
+//                 ),
+//               ),
+//               const SizedBox(height: 100),
+//               Column(
+//                 children: [
+//                   Container(
+//                     width: double.infinity,
+//                     decoration: const BoxDecoration(
+//                       color: Color(0xFFE8F7F2),
+//                       borderRadius: BorderRadius.only(
+//                         topLeft: Radius.circular(200),
+//                       ),
+//                     ),
+//                     padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 80),
+//                     child: Column(
+//                       crossAxisAlignment: CrossAxisAlignment.start,
+//                       children: [
+//                         _buildLabel('Phone Number'),
+//                         _buildTextField(
+//                           hintText: 'Enter your phone number',
+//                           controller: phoneController,
+//                           isPhoneField: true,
+//                         ),
+//                         const SizedBox(height: 20),
+//                         _buildLabel('OTP'),
+//                         Row(
+//                           children: [
+//                             Expanded(
+//                               flex: 2,
+//                               child: _buildTextField(
+//                                 hintText: 'Enter OTP',
+//                                 controller: otpController,
+//                               ),
+//                             ),
+//                             const SizedBox(width: 10),
+//                             ElevatedButton(
+//                               onPressed: (countdown > 0 || isOtpSending) 
+//                                   ? null
+//                                   : _sendOtp,
+//                               style: ElevatedButton.styleFrom(
+//                                 backgroundColor: const Color(0xFF82CDD8),
+//                                 shape: RoundedRectangleBorder(
+//                                   borderRadius: BorderRadius.circular(8),
+//                                 ),
+//                               ),
+//                               child: isOtpSending
+//                                   ? const SizedBox(
+//                                       height: 16,
+//                                       width: 16,
+//                                       child: CircularProgressIndicator(
+//                                         color: Colors.white,
+//                                         strokeWidth: 2,
+//                                       ),
+//                                     )
+//                                   : Text(
+//                                       countdown > 0 
+//                                           ? '$countdown sec' 
+//                                           : (lastPhoneNumber == phoneController.text.trim() 
+//                                               ? 'Resend OTP' 
+//                                               : 'Send OTP'),
+//                                       style: const TextStyle(
+//                                         color: Colors.white, 
+//                                         fontSize: 16
+//                                       ),
+//                                     ),
+//                             ),
+//                           ],
+//                         ),
+//                         const SizedBox(height: 20),
+//                         // OTP Verification Button
+//                         SizedBox(
+//                           width: double.infinity,
+//                           child: ElevatedButton(
+//                             onPressed: isLoading ? null : _verifyOtp,
+//                             style: ElevatedButton.styleFrom(
+//                               backgroundColor: isLoading 
+//                                   ? Colors.grey 
+//                                   : const Color(0xFF3F9548),
+//                               shape: RoundedRectangleBorder(
+//                                 borderRadius: BorderRadius.circular(8),
+//                               ),
+//                             ),
+//                             child: isLoading
+//                                 ? const SizedBox(
+//                                     height: 24,
+//                                     width: 24,
+//                                     child: CircularProgressIndicator(
+//                                       color: Colors.white, 
+//                                       strokeWidth: 3
+//                                     ),
+//                                   )
+//                                 : const Text(
+//                                     'Verify',
+//                                     style: TextStyle(
+//                                       color: Colors.white,
+//                                       fontSize: 16,
+//                                       fontWeight: FontWeight.bold,
+//                                     ),
+//                                   ),
+//                           ),
+//                         ),
+//                       ],
+//                     ),
+//                   ),
+//                 ],
+//               ),
+//             ],
+//           ),
+//         ),
+//       ),
+//     );
+//   }
+
+//   Widget _buildLabel(String text) {
+//     return Padding(
+//       padding: const EdgeInsets.only(bottom: 8.0),
+//       child: Text(
+//         text,
+//         style: const TextStyle(
+//           fontWeight: FontWeight.bold,
+//           color: Colors.black,
+//         ),
+//       ),
+//     );
+//   }
+
+//   Widget _buildTextField({
+//     required String hintText,
+//     required TextEditingController controller,
+//     bool isPhoneField = false,
+//   }) {
+//     return TextField(
+//       controller: controller,
+//       decoration: InputDecoration(
+//         hintText: hintText,
+//         filled: true,
+//         fillColor: Colors.grey[200],
+//         border: OutlineInputBorder(
+//           borderRadius: BorderRadius.circular(8),
+//           borderSide: BorderSide.none,
+//         ),
+//       ),
+//       keyboardType: TextInputType.number,
+//       onChanged: (value) {
+//         if (isPhoneField) {
+//           if (!value.startsWith("+91")) {
+//             phoneController.text = "+91";
+//             phoneController.selection = TextSelection.fromPosition(
+//               TextPosition(offset: phoneController.text.length),
+//             );
+//           }
+//           // Reset OTP state if the user enters a new phone number
+//           if (value.trim() != lastPhoneNumber) {
+//             _stopTimer();
+//             setState(() {
+//               countdown = 0;
+//             });
+//           }
+//         }
+//       },
+//     );
+//   }
+// }
+
 import 'dart:async'; // Import to use Timer
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';

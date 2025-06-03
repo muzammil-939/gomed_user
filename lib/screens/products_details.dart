@@ -274,11 +274,14 @@ class _ProductsDetailsState extends ConsumerState<ProductsDetails> {
                     child: Text(product.productName ?? "Product",
                         maxLines: 1, overflow: TextOverflow.ellipsis),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                    child: Text('₹${product.price}',
-                        style: const TextStyle(fontWeight: FontWeight.bold)),
-                  ),
+                Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                child: Text(
+                  '₹${(product.price! + product.price !* 0.10).toStringAsFixed(2)}',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+
                 ],
               ),
             ),

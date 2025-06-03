@@ -214,7 +214,9 @@ class CartScreenState extends ConsumerState<CartScreen> {
     });
   }
 
-  Future<void> _proceedToBuy() async {
+  Future<void> _proceedToBuy({ required double totalAmount,
+    required double codAdvance}) async {
+   
     try {
       List<Data> selectedProducts = [];
       
@@ -302,7 +304,7 @@ class CartScreenState extends ConsumerState<CartScreen> {
         address: add1,
         bookingOtp: bookingOtp,
         paymentmethod:paymentMethodString,
-        codAdvance:codAdvance,
+        codAdvance:paymentMethodString == "cod" ? codAdvance :totalAmount,
         totalPrice:totalAmount,
 
       );
@@ -369,6 +371,8 @@ class CartScreenState extends ConsumerState<CartScreen> {
     print("paidPrice:$codAdvance");
     print("original price:$totalBase");
     print("paymenttype:$selectedMethod");
+
+   
     
 
     return Scaffold(
@@ -561,7 +565,10 @@ class CartScreenState extends ConsumerState<CartScreen> {
                       MaterialPageRoute(
                         builder: (_) => RazorpayPaymentPage(
                           amount: payAmount,
-                          onSuccess: _proceedToBuy,
+                          onSuccess: () => _proceedToBuy(
+                                totalAmount: totalAmount,
+                                codAdvance: codAdvance,
+                              ),
                           email: '',
                           contact: '',
                         ),

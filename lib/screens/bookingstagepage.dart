@@ -206,6 +206,7 @@ Future<void> _loadUserData() async {
 
             // Date Picker
             Row(
+              
               children: [
                 Expanded(
                   child: Text(
@@ -293,9 +294,9 @@ Future<void> _loadUserData() async {
                       final user = userState.data!.first.user;
                       final userId = user?.sId;
                       final address = _addressController.text;
-                      final contact =  '9999999999';
+                      final contact =  '+9391696616';
 
-                      final email = user?.email ?? 'test@example.com';
+                      final email = user?.email ?? 'Gocodedesigners@gmail.com';
 
                       String location = '';
                       if (user?.location != null) {
@@ -317,7 +318,7 @@ Future<void> _loadUserData() async {
                         context,
                         MaterialPageRoute(
                           builder: (_) => RazorpayPaymentPage(
-                            amount: 100, // change this dynamically if needed
+                            amount: 1, // change this dynamically if needed
                             contact: contact,
                             email: email,
                             onSuccess: () async {

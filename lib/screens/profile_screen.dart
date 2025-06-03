@@ -6,8 +6,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart' as loc ;
-import 'package:geocoding/geocoding.dart' ; // Import geocoding package
+import 'package:geocoding/geocoding.dart' ;// Import geocoding package
 import 'package:geocoding/geocoding.dart' as geo;
+
 
 class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({super.key});

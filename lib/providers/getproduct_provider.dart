@@ -130,7 +130,7 @@ Future<void> createBooking({
      required double? totalPrice
 
   }) async {
-print('inside create booking....$userId,$productIds,$location,$address');
+print('inside create booking...$userId,$productIds,$location,$address,$codAdvance,$totalPrice');
     try {
       // Retrieve token from SharedPreferences
       final prefs = await SharedPreferences.getInstance();

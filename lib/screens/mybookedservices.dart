@@ -63,7 +63,7 @@ class _MyServicesPageState extends ConsumerState<MyServicesPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My Services'),
+        title: const Text('booked Services'),
         backgroundColor: Colors.grey[100],
         elevation: 0,
         leading: IconButton(
@@ -105,6 +105,7 @@ class _MyServicesPageState extends ConsumerState<MyServicesPage> {
                                                                 serviceName: service.serviceIds?.isNotEmpty == true ? service.serviceIds!.first.name ?? '' : '',
                                                                 bookingDate: service.createdAt ?? 'Unknown',
                                                                 status: service.status ?? 'Pending',
+                                                                servicedescription:service.serviceIds?.isNotEmpty == true?service.serviceIds!.first.details??'':"",
                                                                 price: service.serviceIds?.isNotEmpty == true ? service.serviceIds!.first.price?.toDouble() ?? 0.0 : 0.0,
                                                                 serviceEngineerId: service.serviceEngineerId ?? '',
                                                                 startOtp:service.startOtp ?? '',

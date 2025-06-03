@@ -12,10 +12,21 @@ class BookingsPage extends ConsumerStatefulWidget {
 }
 
 class _BookingsPageState extends ConsumerState<BookingsPage> {
+  bool _isRefreshing = false;
+
   @override
   void initState() {
     super.initState();
-    Future.microtask(() => ref.read(getproductProvider.notifier).getuserproduct());
+    _loadProducts();
+  }
+
+  Future<void> _loadProducts() async {
+    setState(() => _isRefreshing = true);
+    try {
+      await ref.read(getproductProvider.notifier).getuserproduct();
+    } finally {
+      if (mounted) setState(() => _isRefreshing = false);
+    }
   }
 
   int getCurrentStep(String status) {
@@ -24,9 +35,9 @@ class _BookingsPageState extends ConsumerState<BookingsPage> {
         return 1;
       case 'confirmed':
         return 2;
-      case 'startDelivery':
+      case 'startdelivery':
         return 3;
-      case 'completed': 
+      case 'completed':
         return 4;
       default:
         return 1;
@@ -50,21 +61,28 @@ class _BookingsPageState extends ConsumerState<BookingsPage> {
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
+      body: RefreshIndicator(
+        onRefresh: _loadProducts,
         child: _buildBody(bookingData),
       ),
     );
   }
 
   Widget _buildBody(List<Data>? bookingData) {
+    if (_isRefreshing) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     if (bookingData == null) {
       return const Center(child: CircularProgressIndicator());
-    } else if (bookingData.isEmpty) {
+    }
+
+    if (bookingData.isEmpty) {
       return const Center(child: Text('No bookings found.'));
     }
 
     return ListView.builder(
+      padding: const EdgeInsets.all(16),
       itemCount: bookingData.length,
       itemBuilder: (context, index) {
         final booking = bookingData[index];
@@ -75,7 +93,6 @@ class _BookingsPageState extends ConsumerState<BookingsPage> {
 
   Widget _buildBookingCard(BuildContext context, Data booking) {
     String productNames = booking.productIds?.map((p) => p.productName ?? 'Unknown').join(', ') ?? 'Unknown Product';
-   // String bookingStatus = booking.productIds?.first.bookingStatus ?? 'Unknown';
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 10),
@@ -88,14 +105,6 @@ class _BookingsPageState extends ConsumerState<BookingsPage> {
             Text(productNames, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             const SizedBox(height: 8),
             Text('Booking Date: ${booking.createdAt ?? 'Unknown'}', style: TextStyle(color: Colors.grey[600])),
-            const SizedBox(height: 8),
-            // Text(
-            //   'Status: $bookingStatus',
-            //   style: TextStyle(
-            //     color: bookingStatus == 'Completed' ? Colors.green : Colors.orange,
-            //     fontWeight: FontWeight.w600,
-            //   ),
-            // ),
             const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -106,11 +115,10 @@ class _BookingsPageState extends ConsumerState<BookingsPage> {
                       builder: (_) => OrderTrackingPage(
                         bookingId: booking.sId ?? '',
                         bookingDate: booking.createdAt ?? '',
-                         // PASSING BOOKING-LEVEL FIELDS TO EACH PRODUCT
-                            totalPrice: booking.totalPrice ?? 0.0,
-                            type: booking.type ?? '',
-                            paidPrice: booking.paidPrice ?? 0,
-                            otp: booking.otp ?? '',
+                        totalPrice: booking.totalPrice ?? 0.0,
+                        type: booking.type ?? '',
+                        paidPrice: booking.paidPrice ?? 0,
+                        otp: booking.otp ?? '',
                         products: booking.productIds?.map((product) {
                           return BookedProduct(
                             productId: product.sId ?? '',
@@ -120,12 +128,8 @@ class _BookingsPageState extends ConsumerState<BookingsPage> {
                             bookingStatus: product.bookingStatus ?? '',
                             currentStep: getCurrentStep(product.bookingStatus ?? ''),
                             userPrice: product.userPrice ?? 0.0,
-
-                           
-                            distributorid :product.distributorId!.sId ?? ""
-                            
+                            distributorid: product.distributorId?.sId ?? '',
                           );
-
                         }).toList() ?? [],
                       ),
                     ));
@@ -136,18 +140,15 @@ class _BookingsPageState extends ConsumerState<BookingsPage> {
                   ),
                   child: const Text('View Details', style: TextStyle(color: Colors.black)),
                 ),
-
               ],
             ),
-
-
-
           ],
         ),
       ),
     );
   }
-} 
+}
+
       //            if ((booking.productIds?.any((p) => p.bookingStatus?.toLowerCase() == 'pending') ?? false))
       //           ElevatedButton(
       //             onPressed: () => _showCancelConfirmationDialog(context, booking.sId ?? '', booking.productIds!.first.sId ?? ''),

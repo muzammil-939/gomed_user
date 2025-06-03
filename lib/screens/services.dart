@@ -16,18 +16,27 @@ class ServicesPage extends ConsumerStatefulWidget {
   ServicesPageState createState() => ServicesPageState();
 }
 
-class ServicesPageState extends ConsumerState<ServicesPage>  {
+class ServicesPageState extends ConsumerState<ServicesPage> {
+  bool _isRefreshing = false;
 
   @override
   void initState() {
     super.initState();
-    Future.microtask(() {
-      ref.watch(productserviceprovider.notifier).getproductSevices();
-    });
+    _loadProducts();
+  }
+
+  Future<void> _loadProducts() async {
+    setState(() => _isRefreshing = true);
+    try {
+      await ref.read(productserviceprovider.notifier).getproductSevices();
+      await ref.read(serviceProvider.notifier).getSevices();
+    } finally {
+      if (mounted) setState(() => _isRefreshing = false);
+    }
   }
 
   @override
-  Widget build(BuildContext context,) {
+  Widget build(BuildContext context) {
     final productState = ref.watch(productserviceprovider);
     final serviceState = ref.watch(serviceProvider);
 
@@ -36,11 +45,7 @@ class ServicesPageState extends ConsumerState<ServicesPage>  {
         title: const Text('Services', style: TextStyle(color: Colors.black)),
         backgroundColor: Colors.grey[100],
         elevation: 0,
-        // leading: IconButton(
-        //   icon: const Icon(Icons.arrow_back, color: Colors.black),
-        //   onPressed: () => Navigator.of(context).pop(),
-        // ),
-          actions: [
+        actions: [
           TextButton(
             onPressed: () {
               Navigator.push(
@@ -55,11 +60,11 @@ class ServicesPageState extends ConsumerState<ServicesPage>  {
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: productState.data == null || serviceState.data == null
-            ? const Center(child: CircularProgressIndicator())
-            : Builder(
+body: _isRefreshing || productState.data == null || serviceState.data == null
+    ? const Center(child: CircularProgressIndicator())
+    : RefreshIndicator(
+        onRefresh: _loadProducts,
+        child: Builder(
           builder: (context) {
             final filteredProducts = productState.data!.where((product) {
               final hasService = serviceState.data!.any(
@@ -69,29 +74,38 @@ class ServicesPageState extends ConsumerState<ServicesPage>  {
             }).toList();
 
             if (filteredProducts.isEmpty) {
-              return const Center(child: Text("No services available for any product."));
-            }
-            return ListView.builder(
-                itemCount: filteredProducts.length,
-                itemBuilder: (context, index) {
-                  final product = filteredProducts[index];
-                  final productServices = serviceState.data!
-                      .where((service) => service.productIds!.contains(product.productId))
-                      .toList();
-                    // final productServices = serviceState.data!
-                    //  .where((service) => (service.productIds ?? []).contains(product.productId))
-                    //   .toList();
-
-                  return ProductCard(product: product, services: productServices);
-                },
+              return  ListView( // <- Required for RefreshIndicator to work when content is short
+                children: [
+                  Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(20),
+                      child: Text("No services available for any product."),
+                    ),
+                  )
+                ],
               );
-          }
+            }
+
+            return ListView.builder(
+              padding: const EdgeInsets.all(12.0),
+              itemCount: filteredProducts.length,
+              itemBuilder: (context, index) {
+                final product = filteredProducts[index];
+                final productServices = serviceState.data!
+                    .where((service) => service.productIds!.contains(product.productId))
+                    .toList();
+
+                return ProductCard(product: product, services: productServices);
+              },
+            );
+          },
+        ),
       ),
-    ),
+
     );
   }
-  
 }
+
 
 class ProductCard extends StatelessWidget {
   final product_model.Data product;

@@ -116,8 +116,12 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage> {
                 const SizedBox(height: 4),
                 Text('Paid Price: ₹${paidPrice.toStringAsFixed(2)}', style: const TextStyle(fontSize: 14)),
                 const SizedBox(height: 4),
-                Text('Remaining Pay overall: ₹${remainingPay.toStringAsFixed(2)}', style: const TextStyle(fontSize: 14, color: Colors.red)),
-              ],
+                if (widget.type.toLowerCase() != 'onlinepayment') 
+                  Text(
+                    'Remaining Pay overall: ₹${remainingPay.toStringAsFixed(2)}',
+                    style: const TextStyle(fontSize: 14, color: Colors.red),
+                  ),
+              ]
             ),
             const SizedBox(height: 16),
             Center(
