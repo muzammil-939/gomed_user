@@ -74,53 +74,7 @@ Future<bool> tryAutoLogin() async {
 }
 
 
- // Profile Update Method
-  // Future<void> updateProfile(String? name, String? email, String? phone, File?_selectedImage) async {
-  //   final prefs = await SharedPreferences.getInstance();
-  //   print('ownerName--$name,  email--$email,  mobile--$phone,  photo--${_selectedImage!.path}');
-  //   final userId = prefs.getString('userId'); // Assuming user ID is stored in SharedPreferences
-  //   final token = prefs.getString('firebaseToken'); // Assuming Firebase token is stored
 
-  //   if (userId == null || token == null) {
-  //     print('User ID or Firebase token is missing.');
-  //     return;
-  //   }
-
-  //   final apiUrl = "${Bbapi.updateProfile}/$userId"; // Construct the API URL with userId
-
-  //   try {
-  //     final response = await http.put(
-  //       Uri.parse(apiUrl),
-  //       headers: {
-  //         "Content-Type": "multipart/form-data",
-  //         "Authorization": "Bearer $token", // Send token in Authorization header
-  //       },
-  //       body: json.encode({
-  //         "ownerName": name,
-  //         "email": email,
-  //         "mobile": phone,
-
-  //       }),
-  //     );
-       
-  //     if (response.statusCode == 200 || response.statusCode == 201) {
-  //       // Successfully updated profile
-  //       print("Profile updated successfully.");
-  //       final updatedUser = json.decode(response.body);
-  //       state = state.copyWith(
-  //         data: [Data.fromJson(updatedUser['user'])], // Assuming response contains updated user data
-  //       );
-
-  //       // Optionally, update the local storage
-  //       await prefs.setString('userData', json.encode(updatedUser));
-  //     } else {
-  //       print("Failed to update profile. Status code: ${response.statusCode}");
-  //       print("Response: ${response.body}");
-  //     }
-  //   } catch (e) {
-  //     print("Error while updating profile: $e");
-  //   }
-  // }
 Future<bool> updateProfile(
   String? name,
   String? email,

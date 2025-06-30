@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gomed_user/model/get_productbooking.dart';
 import 'package:gomed_user/providers/getproduct_provider.dart';
+import 'package:gomed_user/providers/loader.dart';
 import 'product_ordertracking.dart';
 
 class BookingsPage extends ConsumerStatefulWidget {
@@ -12,22 +13,35 @@ class BookingsPage extends ConsumerStatefulWidget {
 }
 
 class _BookingsPageState extends ConsumerState<BookingsPage> {
-  bool _isRefreshing = false;
+  // bool _isRefreshing = false;
+
+  // @override
+  // void initState() {
+  //   super.initState();
+  //   _loadProducts();
+  // }
 
   @override
   void initState() {
     super.initState();
-    _loadProducts();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(getproductProvider.notifier).getuserproduct();
+    });
   }
 
-  Future<void> _loadProducts() async {
-    setState(() => _isRefreshing = true);
-    try {
-      await ref.read(getproductProvider.notifier).getuserproduct();
-    } finally {
-      if (mounted) setState(() => _isRefreshing = false);
-    }
+  Future<void> _refreshBookings() async {
+    await ref.read(getproductProvider.notifier).getuserproduct();
   }
+
+
+  // Future<void> _loadProducts() async {
+  //   setState(() => _isRefreshing = true);
+  //   try {
+  //     await ref.read(getproductProvider.notifier).getuserproduct();
+  //   } finally {
+  //     if (mounted) setState(() => _isRefreshing = false);
+  //   }
+  // }
 
   int getCurrentStep(String status) {
     switch (status.toLowerCase()) {
@@ -47,6 +61,7 @@ class _BookingsPageState extends ConsumerState<BookingsPage> {
   @override
   Widget build(BuildContext context) {
     final bookingState = ref.watch(getproductProvider);
+     final isLoading = ref.watch(loadingProvider);
     final bookingData = bookingState.data;
 
     return Scaffold(
@@ -61,35 +76,48 @@ class _BookingsPageState extends ConsumerState<BookingsPage> {
           ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: _loadProducts,
-        child: _buildBody(bookingData),
+     body: RefreshIndicator(
+        onRefresh: _refreshBookings,
+        child: isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : bookingData == null
+                ? const Center(child: Text("Something went wrong."))
+                : bookingData.isEmpty
+                    ? const Center(child: Text('No bookings found.'))
+                    : ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: bookingData.length,
+                        itemBuilder: (context, index) {
+                          final booking = bookingData[index];
+                          return _buildBookingCard(context, booking);
+                        },
+                      ),
       ),
     );
   }
+  //  child: _buildBody(bookingData),
+  // Widget _buildBody(List<Data>? bookingData) {
+  //   if (_isRefreshing) {
+  //     return const Center(child: CircularProgressIndicator());
+  //   }
 
-  Widget _buildBody(List<Data>? bookingData) {
-    if (_isRefreshing) {
-      return const Center(child: CircularProgressIndicator());
-    }
+  //   if (bookingData == null) {
+  //     return const Center(child: CircularProgressIndicator());
+  //   }
 
-    if (bookingData == null) {
-      return const Center(child: CircularProgressIndicator());
-    }
+  //   if (bookingData.isEmpty) {
+  //     return const Center(child: Text('No bookings found.'));
+  //   }
 
-    if (bookingData.isEmpty) {
-      return const Center(child: Text('No bookings found.'));
-    }
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: bookingData.length,
-      itemBuilder: (context, index) {
-        final booking = bookingData[index];
-        return _buildBookingCard(context, booking);
-      },
-    );
-  }
+  //   return ListView.builder(
+  //     padding: const EdgeInsets.all(16),
+  //     itemCount: bookingData.length,
+  //     itemBuilder: (context, index) {
+  //       final booking = bookingData[index];
+  //       return _buildBookingCard(context, booking);
+  //     },
+  //   );
+  // }
 
   Widget _buildBookingCard(BuildContext context, Data booking) {
     String productNames = booking.productIds?.map((p) => p.productName ?? 'Unknown').join(', ') ?? 'Unknown Product';

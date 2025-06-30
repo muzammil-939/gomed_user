@@ -45,6 +45,16 @@ class CartScreenState extends ConsumerState<CartScreen> {
     super.initState();
     _loadCartItems();
     _loadAddress();
+    locationSearchController.addListener(() {
+    if (locationSearchController.text.isEmpty) {
+      setState(() {
+        latitude = null;
+        longitude = null;
+        locationAddress = "Location not selected";
+      });
+    }
+  });
+
   }
 
   Future<void> _loadAddress() async {
@@ -477,6 +487,120 @@ class CartScreenState extends ConsumerState<CartScreen> {
                   ],
                 ),
               ),
+              // Padding(
+              //   padding: const EdgeInsets.all(8),
+              //   child: Column(
+              //     crossAxisAlignment: CrossAxisAlignment.start,
+              //     children: [
+              //       const Text(
+              //         "Search Location:",
+              //         style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              //       ),
+              //       const SizedBox(height: 10),
+              //       GooglePlaceAutoCompleteTextField(
+              //         textEditingController: locationSearchController,
+              //         googleAPIKey: "AIzaSyCMADwyS3eoxJ5dQ_iFiWcDBA_tJwoZosw",
+              //         inputDecoration: InputDecoration(
+              //           hintText: "Search for location",
+              //           border: OutlineInputBorder(
+              //             borderRadius: BorderRadius.circular(10),
+              //           ),
+              //           contentPadding: const EdgeInsets.symmetric(horizontal: 15),
+              //           suffixIcon: locationSearchController.text.isNotEmpty
+              //               ? IconButton(
+              //                   icon: const Icon(Icons.clear),
+              //                   onPressed: () {
+              //                     setState(() {
+              //                       locationSearchController.clear();
+              //                       latitude = null;
+              //                       longitude = null;
+              //                       locationAddress = "Location not selected";
+              //                     });
+              //                   },
+              //                 )
+              //               : null,
+              //         ),
+              //         debounceTime: 800,
+              //         isLatLngRequired: true,
+                      
+              //         // Enable manual text editing
+              //         countries: const [], // Allow all countries
+              //         // textCapitalization: TextCapitalization.words,
+                      
+              //         // // This is crucial for manual editing
+              //         // textChanged: (value) {
+              //         //   // Allow manual text changes and clear location data if text is empty
+              //         //   if (value.isEmpty) {
+              //         //     setState(() {
+              //         //       latitude = null;
+              //         //       longitude = null;
+              //         //       locationAddress = "Location not selected";
+              //         //     });
+              //         //   }
+              //         // },
+                      
+              //         getPlaceDetailWithLatLng: (prediction) {
+              //           double lat = double.parse(prediction.lat!);
+              //           double lng = double.parse(prediction.lng!);
+              //           setState(() {
+              //             latitude = lat;
+              //             longitude = lng;
+              //           });
+              //           _getAddressFromCoordinates(lat, lng);
+              //         },
+                      
+              //         itemClick: (prediction) {
+              //           FocusScope.of(context).unfocus();
+              //           setState(() {
+              //             locationSearchController.text = prediction.description!;
+              //             locationSearchController.selection = TextSelection.fromPosition(
+              //               TextPosition(offset: prediction.description!.length),
+              //             );
+              //           });
+              //         },
+                      
+              //         // Custom item builder for better UI
+              //         itemBuilder: (context, index, prediction) {
+              //           return Container(
+              //             padding: const EdgeInsets.all(10),
+              //             child: Row(
+              //               children: [
+              //                 const Icon(Icons.location_on, color: Colors.grey, size: 20),
+              //                 const SizedBox(width: 10),
+              //                 Expanded(
+              //                   child: Text(
+              //                     prediction.description ?? "",
+              //                     style: const TextStyle(fontSize: 14),
+              //                     overflow: TextOverflow.ellipsis,
+              //                   ),
+              //                 ),
+              //               ],
+              //             ),
+              //           );
+              //         },
+                      
+              //         // Add separator between items
+              //         seperatedBuilder: const Divider(height: 1),
+                      
+              //         // Container styling for suggestions
+              //         containerHorizontalPadding: 0,
+                      
+              //         // Focus handling
+              //         focusNode: FocusNode(),
+              //       ),
+              //       const SizedBox(height: 10),
+              //       const Text(
+              //         "Your Location:",
+              //         style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              //       ),
+              //       const SizedBox(height: 10),
+              //       Text(
+              //         locationAddress,
+              //         style: const TextStyle(fontSize: 14, color: Colors.black87),
+              //       ),
+              //     ],
+              //   ),
+              // ),
 
               // Cart items list
               SizedBox(

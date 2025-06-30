@@ -87,7 +87,7 @@ void initState() {
         setState(() {
           _currentPosition = latLng;
          _currentAddress = address;
-         addressController.text = address; // <-- Optional: autofill address field
+        //  addressController.text = address; // <-- Optional: autofill address field
           lat = location.latitude;
           lng = location.longitude;
 
@@ -140,6 +140,7 @@ void initState() {
       final int imageSize = await imageFile.length();
 
       if (imageSize <= maxImageSize) {
+        //  await Future.delayed(const Duration(milliseconds: 200)); // ✅ short delay to avoid GPU overload
         setState(() {
           _selectedImage = imageFile;
         });
@@ -165,74 +166,80 @@ void initState() {
   }
 
 Future<void> getCurrentLocation() async {
-  loc.Location location = loc.Location();
+  print("📍 Entered getCurrentLocation");
 
-  bool serviceEnabled;
-  loc.PermissionStatus permissionGranted;
-  loc.LocationData locationData;
-
-  serviceEnabled = await location.serviceEnabled();
-  if (!serviceEnabled) {
-    serviceEnabled = await location.requestService();
-    if (!serviceEnabled) {
-      return;
-    }
-  }
-
-  permissionGranted = await location.hasPermission();
-  if (permissionGranted == loc.PermissionStatus.denied) {
-    permissionGranted = await location.requestPermission();
-    if (permissionGranted != loc.PermissionStatus.granted) {
-      return;
-    }
-  }
-
-  // Force high accuracy mode for precise location
-  await location.changeSettings(accuracy: loc.LocationAccuracy.high);
-
-  locationData = await location.getLocation();
-   lat = locationData.latitude;
-   lng = locationData.longitude;
-
-  // Print latitude and longitude to console
-  print("Latitude: $lat, Longitude: $lng");
+  final loc.Location location = loc.Location();
 
   try {
+    bool serviceEnabled = await location.serviceEnabled();
+    print("🔧 Location service enabled: $serviceEnabled");
+
+    if (!serviceEnabled) {
+      serviceEnabled = await location.requestService();
+      print("🛠️ Requested service enable: $serviceEnabled");
+      if (!serviceEnabled) {
+        print("❌ User denied enabling location service.");
+        return;
+      }
+    }
+
+    loc.PermissionStatus permissionGranted = await location.hasPermission();
+    print("🔐 Initial permission status: $permissionGranted");
+
+    if (permissionGranted == loc.PermissionStatus.denied) {
+      permissionGranted = await location.requestPermission();
+      print("📤 Requested permission: $permissionGranted");
+      if (permissionGranted != loc.PermissionStatus.granted) {
+        print("❌ Location permission not granted");
+        return;
+      }
+    }
+
+    print("✅ Permissions and service are fine. Fetching location...");
+    await location.changeSettings(accuracy: loc.LocationAccuracy.high);
+
+    loc.LocationData locationData = await location.getLocation();
+    lat = locationData.latitude;
+    lng = locationData.longitude;
+
+    print("📍 Got coordinates: lat=$lat, lng=$lng");
+
+    if (lat == null || lng == null) {
+      print("⚠️ Location returned null values.");
+      return;
+    }
+
     List<Placemark> placemarks = await placemarkFromCoordinates(lat!, lng!);
     Placemark place = placemarks.first;
 
-    String address =
-        "${place.street}, ${place.locality}, ${place.administrativeArea}, ${place.country}";
+    String address = "${place.street}, ${place.locality}, ${place.administrativeArea}, ${place.country}";
+    print("📬 Reverse geocoded address: $address");
 
     if (mounted) {
-  setState(() {
-    print("Updated lat: $lat, lng: $lng");
-    _currentPosition = LatLng(lat!, lng!);
-    _currentAddress = address;
-    _markers.clear();
-    _markers.add(Marker(
-      markerId: const MarkerId("currentLocation"),
-      position: LatLng(lat!, lng!),
-      infoWindow: InfoWindow(title: "Your Location", snippet: address),
-    ));
-  });
-}
+      setState(() {
+        _currentPosition = LatLng(lat!, lng!);
+        _currentAddress = address;
+        _markers.clear();
+        _markers.add(Marker(
+          markerId: const MarkerId("currentLocation"),
+          position: LatLng(lat!, lng!),
+          infoWindow: InfoWindow(title: "Your Location", snippet: address),
+        ));
+      });
+    }
 
-
-    // Move camera to exact location
-   if (_isMapReady) {
-  _mapController.animateCamera(
-    CameraUpdate.newCameraPosition(
-      CameraPosition(target: LatLng(lat!, lng!), zoom: 18),
-    ),
-  );
-}
-
-
+    if (_isMapReady) {
+      _mapController.animateCamera(
+        CameraUpdate.newCameraPosition(
+          CameraPosition(target: LatLng(lat!, lng!), zoom: 18),
+        ),
+      );
+    }
   } catch (e) {
-    print("Error getting address: $e");
+    print("❗ Error in getCurrentLocation: $e");
   }
 }
+
 
 
 
@@ -336,6 +343,7 @@ Future<void> getCurrentLocation() async {
                 markers: _markers,
                 myLocationEnabled: true,
                 myLocationButtonEnabled: true,
+               
               ),
             ),
 

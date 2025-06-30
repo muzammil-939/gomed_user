@@ -147,7 +147,7 @@ class _ProductsDetailsState extends ConsumerState<ProductsDetails> {
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text('₹${widget.product.price}',
+               Text('₹${(widget.product.price! * 1.10).toStringAsFixed(2)}',
                     style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                 Text(widget.product.productDescription ?? 'Description'),
 
