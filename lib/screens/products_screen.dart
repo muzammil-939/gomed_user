@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import 'package:gomed_user/model/product.dart';
 import 'package:gomed_user/providers/products.dart';
 import 'package:gomed_user/screens/cart_screen.dart';
@@ -122,7 +121,7 @@ class ProductsScreenState extends ConsumerState<ProductsScreen> with TickerProvi
 
   @override
   Widget build(BuildContext context) {
-    final productState = ref.watch(productProvider);
+    // final productState = ref.watch(productProvider);
     
     if (!_isInitialized || _tabController == null) {
       return Scaffold(
@@ -469,17 +468,17 @@ Future<void> _handleCartButtonPress(Data product, bool isInCart, VoidCallback up
   }
 
 // 4. Additional helper method to get cart items for a specific product
-Future<bool> _isProductInCart(String productId, String distributorId) async {
-  try {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    List<String> cartItems = prefs.getStringList('cartItems') ?? [];
-    String cartItemKey = "${productId}_${distributorId}";
-    return cartItems.contains(cartItemKey);
-  } catch (e) {
-    print('Error checking cart: $e');
-    return false;
-  }
-}  
+// Future<bool> _isProductInCart(String productId, String distributorId) async {
+//   try {
+//     SharedPreferences prefs = await SharedPreferences.getInstance();
+//     List<String> cartItems = prefs.getStringList('cartItems') ?? [];
+//     String cartItemKey = "${productId}_${distributorId}";
+//     return cartItems.contains(cartItemKey);
+//   } catch (e) {
+//     print('Error checking cart: $e');
+//     return false;
+//   }
+// }  
 
   // 1. Update _addToCart method to include distributorId
 Future<void> _addToCart(String productId, String distributorId) async {

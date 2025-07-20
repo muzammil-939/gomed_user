@@ -1,15 +1,54 @@
 {
   "project_info": {
     "project_number": "188631012849",
+    "firebase_url": "https://go-med-9a330-default-rtdb.firebaseio.com",
     "project_id": "go-med-9a330",
     "storage_bucket": "go-med-9a330.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
+        "mobilesdk_app_id": "1:188631012849:android:72a15553ee6f3d697e2050",
+        "android_client_info": {
+          "package_name": "com.distributor.go_med"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD2af-NHCkHX6LDtfzOYR4gea6xFFOAx1o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
         "mobilesdk_app_id": "1:188631012849:android:7105dcc089f12b9c7e2050",
         "android_client_info": {
           "package_name": "com.gmd_user"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD2af-NHCkHX6LDtfzOYR4gea6xFFOAx1o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:188631012849:android:73ef8e78320e12627e2050",
+        "android_client_info": {
+          "package_name": "com.thozhilvaniga.kiitmgomedserv"
         }
       },
       "oauth_client": [],

@@ -5,8 +5,6 @@ import 'package:gomed_user/screens/profile_screen.dart';
 import 'package:gomed_user/screens/settings_screen.dart';
 import 'package:gomed_user/screens/services.dart';
 import 'package:gomed_user/providers/auth_state.dart';
-import 'package:gomed_user/model/auth.dart';
-
 import 'booking_screen.dart';
 import 'home_page_content.dart';
 

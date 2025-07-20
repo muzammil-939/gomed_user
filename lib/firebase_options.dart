@@ -46,34 +46,38 @@ class DefaultFirebaseOptions {
     messagingSenderId: '188631012849',
     projectId: 'go-med-9a330',
     authDomain: 'go-med-9a330.firebaseapp.com',
+    databaseURL: 'https://go-med-9a330-default-rtdb.firebaseio.com',
     storageBucket: 'go-med-9a330.firebasestorage.app',
     measurementId: 'G-H37JY7TBH9',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyD2af-NHCkHX6LDtfzOYR4gea6xFFOAx1o',
-    appId: '1:188631012849:android:7105dcc089f12b9c7e2050',
+    appId: '1:188631012849:android:73ef8e78320e12627e2050',
     messagingSenderId: '188631012849',
     projectId: 'go-med-9a330',
+    databaseURL: 'https://go-med-9a330-default-rtdb.firebaseio.com',
     storageBucket: 'go-med-9a330.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyCRo84aNwN8rfejDKGdZnj9JW9RDToDQo0',
-    appId: '1:188631012849:ios:b840c31d39b290887e2050',
+    appId: '1:188631012849:ios:98343e8af18969297e2050',
     messagingSenderId: '188631012849',
     projectId: 'go-med-9a330',
+    databaseURL: 'https://go-med-9a330-default-rtdb.firebaseio.com',
     storageBucket: 'go-med-9a330.firebasestorage.app',
-    iosBundleId: 'gomeduser.gomedUser',
+    iosBundleId: 'com.example.gomeduser.gomedUser',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
     apiKey: 'AIzaSyCRo84aNwN8rfejDKGdZnj9JW9RDToDQo0',
-    appId: '1:188631012849:ios:b840c31d39b290887e2050',
+    appId: '1:188631012849:ios:98343e8af18969297e2050',
     messagingSenderId: '188631012849',
     projectId: 'go-med-9a330',
+    databaseURL: 'https://go-med-9a330-default-rtdb.firebaseio.com',
     storageBucket: 'go-med-9a330.firebasestorage.app',
-    iosBundleId: 'gomeduser.gomedUser',
+    iosBundleId: 'com.example.gomeduser.gomedUser',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
@@ -82,6 +86,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '188631012849',
     projectId: 'go-med-9a330',
     authDomain: 'go-med-9a330.firebaseapp.com',
+    databaseURL: 'https://go-med-9a330-default-rtdb.firebaseio.com',
     storageBucket: 'go-med-9a330.firebasestorage.app',
     measurementId: 'G-SQBB199CP6',
   );

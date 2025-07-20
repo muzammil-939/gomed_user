@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:gomed_user/model/auth.dart';
-import 'package:gomed_user/model/authstate.dart';
+
 import 'package:gomed_user/providers/auth_state.dart';
-import 'package:gomed_user/providers/firebase_auth.dart';
+
 import 'package:gomed_user/providers/logout_notifier.dart';
 import 'package:gomed_user/screens/login_screen.dart';
 import 'package:gomed_user/screens/profile_screen.dart';
@@ -56,27 +55,27 @@ class SettingsPageState extends ConsumerState<SettingsPage>{
                 Navigator.push(context, MaterialPageRoute(builder:(context) =>ProfilePage()));
               },
             ),
-            _buildSettingsItem(
-              context,
-              label: 'Payment history',
-              onTap: () {
-                // Navigate to Payment History
-              },
-            ),
-            _buildSettingsItem(
-              context,
-              label: 'Notification settings',
-              onTap: () {
-                // Navigate to Notification Settings
-              },
-            ),
-            _buildSettingsItem(
-              context,
-              label: 'Wallet',
-              onTap: () {
-                // Navigate to Wallet
-              },
-            ),
+            // _buildSettingsItem(
+            //   context,
+            //   label: 'Payment history',
+            //   onTap: () {
+            //     // Navigate to Payment History
+            //   },
+            // ),
+            // _buildSettingsItem(
+            //   context,
+            //   label: 'Notification settings',
+            //   onTap: () {
+            //     // Navigate to Notification Settings
+            //   },
+            // ),
+            // _buildSettingsItem(
+            //   context,
+            //   label: 'Wallet',
+            //   onTap: () {
+            //     // Navigate to Wallet
+            //   },
+            // ),
             _buildSettingsItem(
               context,
               label: 'Log out',

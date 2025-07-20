@@ -5,7 +5,7 @@ import 'package:gomed_user/model/service.dart';
 import 'package:gomed_user/providers/products.dart';
 import 'package:gomed_user/providers/getservice.dart';
 import 'package:gomed_user/screens/products_screen.dart';
-import 'package:gomed_user/screens/home_page.dart';
+
 
 class HomePageContent extends ConsumerStatefulWidget {
   final  Function(int) onCategorySelected;
@@ -201,7 +201,7 @@ class _HomePageContentState extends ConsumerState<HomePageContent> {
         itemCount: services.length, // Use services data from the provider
         itemBuilder: (context, index) {
           return Padding(
-             padding: EdgeInsets.only(bottom: screenHeight * 0.02), // spacing between cards
+             padding: EdgeInsets.only(bottom: screenHeight * 0.03), // spacing between cards
             child: ServiceCard(
               screenWidth: screenWidth,
               screenHeight: screenHeight,
@@ -214,6 +214,20 @@ class _HomePageContentState extends ConsumerState<HomePageContent> {
   }
 }
 
+//   // Fixed _buildFeaturedServices method
+// Widget _buildFeaturedServices(double screenWidth, double screenHeight, List<Data> services) {
+//   return Column(
+//     children: services.map((service) {
+//       return ServiceCard(
+//         screenWidth: screenWidth,
+//         screenHeight: screenHeight,
+//         service: service,
+//       );
+//     }).toList(),
+//   );
+// }
+// }
+
 
 class ServiceCard extends StatelessWidget {
   const ServiceCard({super.key, required this.screenWidth, required this.screenHeight, required this.service});
@@ -223,6 +237,7 @@ class ServiceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final lightGreyShadow = Colors.grey.withValues(alpha: 18);
     return Container(
       height: screenHeight * 0.2,
       width: screenWidth * 0.4,
@@ -233,11 +248,11 @@ class ServiceCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(15), // Increased border radius
         boxShadow: [ // Added shadow
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: lightGreyShadow,
             spreadRadius: 5,
-            blurRadius: 5,
-            offset: const Offset(0, 3), // changes position of shadow
-          ),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          )
         ],
       ),
       child: Column(
@@ -275,3 +290,85 @@ class ServiceCard extends StatelessWidget {
     );
   }
 }
+
+// Fixed ServiceCard Widget
+// class ServiceCard extends StatelessWidget {
+//   const ServiceCard({super.key, required this.screenWidth, required this.screenHeight, required this.service});
+//   final double screenWidth;
+//   final double screenHeight;
+//   final Data service;
+
+//   @override
+//   Widget build(BuildContext context) {
+//     final lightGreyShadow = Colors.grey.withValues(alpha: 26);
+//     return Container(
+//       height: screenHeight * 0.18, // Reduced height slightly
+//       width: double.infinity, // Use full width instead of fixed width
+//       margin: EdgeInsets.only(bottom: screenHeight * 0.015), // Consistent bottom margin
+//       padding: EdgeInsets.all(screenWidth * 0.04), // More balanced padding
+//       decoration: BoxDecoration(
+//         color: Colors.white,
+//         borderRadius: BorderRadius.circular(15),
+//         boxShadow: [
+//           BoxShadow(
+//             color: lightGreyShadow,
+//             spreadRadius: 2, // Reduced spread radius
+//             blurRadius: 6, // Reduced blur radius
+//             offset: const Offset(0, 2), // Reduced offset
+//           )
+//         ],
+//       ),
+//       child: Column(
+//         crossAxisAlignment: CrossAxisAlignment.start,
+//         mainAxisAlignment: MainAxisAlignment.spaceEvenly, // Distribute space evenly
+//         children: [
+//           // Service name
+//           Text(
+//             service.name ?? 'Service Name',
+//             style: const TextStyle(
+//               fontWeight: FontWeight.bold,
+//               fontSize: 16,
+//             ),
+//             maxLines: 2, // Limit to 2 lines to prevent overflow
+//             overflow: TextOverflow.ellipsis,
+//           ),
+          
+//           // Star rating
+//           Row(
+//             children: List.generate(
+//               5,
+//               (index) => Icon(
+//                 Icons.star,
+//                 color: Colors.amber,
+//                 size: 16,
+//               ),
+//             ),
+//           ),
+          
+//           // Service details
+//           Text(
+//             service.details ?? 'Category',
+//             style: const TextStyle(
+//               color: Colors.blue,
+//               fontSize: 12,
+//             ),
+//             maxLines: 2, // Limit to 2 lines
+//             overflow: TextOverflow.ellipsis,
+//           ),
+          
+//           // Price
+//           Text(
+//             service.price != null ? '₹${service.price}' : 'Price N/A',
+//             style: const TextStyle(
+//               color: Colors.green,
+//               fontWeight: FontWeight.bold,
+//               fontSize: 16,
+//             ),
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+// }
+
+

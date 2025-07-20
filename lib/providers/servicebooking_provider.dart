@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gomed_user/model/auth.dart' hide Data;
 import 'package:gomed_user/model/servicebooking.dart';

@@ -146,7 +146,7 @@ class Data {
 
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = {};
-    data['distributorId'] = this.distributorId;
+    data['distributorId'] = this.productId;
     data['productId'] = this.productId;
     data['parentId'] = this.parentId;
     data['productName'] = this.productName;

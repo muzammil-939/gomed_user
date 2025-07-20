@@ -2,33 +2,28 @@ import 'package:flutter/material.dart';
 // import "package:font_awesome_flutter/font_awesome_flutter.dart";
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:gomed_user/model/auth.dart';
 import 'package:gomed_user/providers/auth_state.dart';
-import 'package:gomed_user/providers/firebase_auth.dart';
 import 'package:gomed_user/screens/booking_screen.dart';
-import 'package:gomed_user/screens/bookingstagepage.dart';
 import 'package:gomed_user/screens/home_page.dart';
 import 'package:gomed_user/screens/login_screen.dart'; // Import Riverpod
-import 'package:gomed_user/screens/product_ordertracking.dart';
-import 'package:gomed_user/screens/payment.dart';
-import 'package:gomed_user/screens/products_screen.dart';
 import 'package:gomed_user/screens/profile_screen.dart';
-import 'package:gomed_user/screens/service_details.dart';
 import 'package:gomed_user/screens/services.dart';
 import 'package:gomed_user/screens/settings_screen.dart';
-// import 'package:gomed_user/screens/welcom.dart';
-
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'firebase_options.dart';
-import 'screens/home_page_content.dart';
 import 'package:flutter/services.dart';
 import 'dart:math';
 
+//🟢 Global key for showing SnackBar from anywhere
+final GlobalKey<ScaffoldMessengerState> globalMessengerKey = GlobalKey<ScaffoldMessengerState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-);
+  FirebaseApp app = await Firebase.initializeApp(
+     options: DefaultFirebaseOptions.currentPlatform,
+  );
+    print("🔥 Firebase project in use: ${app.options.projectId}");
+
 
   // Restrict orientation to portrait mode
   await SystemChrome.setPreferredOrientations([
@@ -55,11 +50,46 @@ String generatebookingOtp() {
   return otp.toString();
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+
+  late final Connectivity _connectivity;
+  late final Stream<ConnectivityResult> _connectivityStream;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _connectivity = Connectivity();
+   _connectivityStream = _connectivity.onConnectivityChanged.map((list) => list.first);
+
+
+    _connectivityStream.listen((ConnectivityResult result) {
+      final isConnected = result != ConnectivityResult.none;
+
+      globalMessengerKey.currentState?.showSnackBar(
+        SnackBar(
+          content: Text(
+            isConnected ? '✅ Back online' : '🚫 No internet connection',
+          ),
+          backgroundColor: isConnected ? Colors.green : Colors.red,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(debugShowCheckedModeBanner: false, routes: {
+    return MaterialApp(debugShowCheckedModeBanner: false,  scaffoldMessengerKey: globalMessengerKey,
+    
+    routes: {
       '/': (context) {
         return Consumer(
   builder: (context, ref, child) {
@@ -119,3 +149,5 @@ class MyApp extends StatelessWidget {
     });
   }
 }
+
+

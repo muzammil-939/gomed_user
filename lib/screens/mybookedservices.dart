@@ -96,47 +96,47 @@ class _MyServicesPageState extends ConsumerState<MyServicesPage> {
                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   ElevatedButton(
-                                                    onPressed: () {
-                                                      Navigator.push(
-                                                        context,
-                                                        MaterialPageRoute(
-                                                                builder: (context) => ServiceOrdertracing(                                
-                                                                bookingId: service.sId ?? 'Unknown',
-                                                                serviceName: service.serviceIds?.isNotEmpty == true ? service.serviceIds!.first.name ?? '' : '',
-                                                                bookingDate: service.createdAt ?? 'Unknown',
-                                                                status: service.status ?? 'Pending',
-                                                                servicedescription:service.serviceIds?.isNotEmpty == true?service.serviceIds!.first.details??'':"",
-                                                                price: service.serviceIds?.isNotEmpty == true ? service.serviceIds!.first.price?.toDouble() ?? 0.0 : 0.0,
-                                                                serviceEngineerId: service.serviceEngineerId ?? '',
-                                                                startOtp:service.startOtp ?? '',
-                                                                endOtp:service.endOtp ?? ''
-                                                              ),
-                                                        ),
-                                                      );
-                                                    },
-                                                    style: ElevatedButton.styleFrom(
-                                                      backgroundColor: Colors.blue[100],
-                                                      shape: RoundedRectangleBorder(
-                                                        borderRadius: BorderRadius.circular(8),
-                                                      ),
-                                                      padding: EdgeInsets.symmetric(
-                                                        vertical: screenHeight * 0.015,
-                                                        horizontal: screenWidth * 0.05,
-                                                      ),
-                                                    ),
-                                                    child: Text(
-                                                      'View Details',
-                                                      style: TextStyle(
-                                                        color: Colors.black,
-                                                        fontSize: screenWidth * 0.03,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                   ElevatedButton(
-                                                     onPressed: () => _cancelBooking(context, service.sId ),
-                                                      style: ElevatedButton.styleFrom(backgroundColor: Colors.red[100]),
-                                                      child: const Text('Cancel', style: TextStyle(color: Colors.red)),
-                                                    ),
+                                    onPressed: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                                builder: (context) => ServiceOrdertracing(                                
+                                                bookingId: service.sId ?? 'Unknown',
+                                                serviceName: service.serviceIds?.isNotEmpty == true ? service.serviceIds!.first.name ?? '' : '',
+                                                bookingDate: service.createdAt ?? 'Unknown',
+                                                status: service.status ?? 'Pending',
+                                                servicedescription:service.serviceIds?.isNotEmpty == true?service.serviceIds!.first.details??'':"",
+                                                price: service.serviceIds?.isNotEmpty == true ? service.serviceIds!.first.price?.toDouble() ?? 0.0 : 0.0,
+                                                serviceEngineerId: service.serviceEngineerId ?? '',
+                                                startOtp:service.startOtp ?? '',
+                                                endOtp:service.endOtp ?? ''
+                                              ),
+                                        ),
+                                      );
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.blue[100],
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      padding: EdgeInsets.symmetric(
+                                        vertical: screenHeight * 0.015,
+                                        horizontal: screenWidth * 0.05,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      'View Details',
+                                      style: TextStyle(
+                                        color: Colors.black,
+                                        fontSize: screenWidth * 0.03,
+                                      ),
+                                    ),
+                                  ),
+                                    ElevatedButton(
+                                      onPressed: () => _cancelBooking(context, service.sId ),
+                                      style: ElevatedButton.styleFrom(backgroundColor: Colors.red[100]),
+                                      child: const Text('Cancel', style: TextStyle(color: Colors.red)),
+                                    ),
                                 ],
                               ),
                             ],

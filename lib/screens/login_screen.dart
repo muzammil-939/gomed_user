@@ -3,12 +3,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gomed_user/providers/auth_state.dart';
-import '../providers/firebase_auth.dart';
-import '../providers/loader.dart';
-import 'home_page.dart';
-import 'package:gomed_user/model/auth.dart'; // Import the UserModel
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 
 
@@ -56,8 +50,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final authState = ref.watch(loadingProvider);
-    final authNotifier = ref.read(userProvider.notifier);
+    // final authState = ref.watch(loadingProvider);
+    // final authNotifier = ref.read(userProvider.notifier);
 
     return Scaffold(
       body: Container(
@@ -171,7 +165,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                    });
                                   // Verify the OTP
                                   try {
-                                  await ref.read(userProvider.notifier).signInWithPhoneNumber(smsCode, ref);
+                                  await ref.read(userProvider.notifier).signInWithPhoneNumber(smsCode, ref,context);
                                      // ✅ Stop the Timer
                                      if (_timer.isActive) {
                                             _timer.cancel();

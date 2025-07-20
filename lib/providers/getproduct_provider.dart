@@ -8,7 +8,6 @@ import 'package:gomed_user/providers/loader.dart';
 import 'package:gomed_user/utils/gomed_api.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/retry.dart';
-import 'package:firebase_database/firebase_database.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class GetproductProvider extends StateNotifier<GetproductModel> {

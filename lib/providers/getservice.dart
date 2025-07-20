@@ -82,11 +82,3 @@ final serviceProvider =
     StateNotifierProvider<Serviceprovider, ServiceModel>((ref) {
   return Serviceprovider(ref);
 });
-
-
-
-
-
-
-
-

@@ -1,9 +1,11 @@
 import 'dart:io';
 import 'dart:math';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gomed_user/model/auth.dart' ;
+import 'package:gomed_user/screens/home_page.dart';
 import 'package:http/retry.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'firebase_auth.dart';
@@ -205,66 +207,80 @@ if (selectedImage != null) {
 
 
 
-  Future<void> verifyPhoneNumber(
-    String phoneNumber,
-    WidgetRef ref,
-    BuildContext context,
-    
-  ) async {
-    final auth = ref.read(firebaseAuthProvider);
-    var loader = ref.read(loadingProvider.notifier);
-    var codeSentNotifier = ref.read(codeSentProvider.notifier);
-    //loader.state = true;
-    var pref = await SharedPreferences.getInstance();
+Future<void> verifyPhoneNumber(
+  String phoneNumber,
+  WidgetRef ref,
+  BuildContext context,
+) async {
+  final auth = ref.read(firebaseAuthProvider);
+  var loader = ref.read(loadingProvider.notifier);
+  var codeSentNotifier = ref.read(codeSentProvider.notifier);
+  var pref = await SharedPreferences.getInstance();
 
-    try {
-      await auth.verifyPhoneNumber(
-        phoneNumber: phoneNumber,
-        verificationCompleted: (PhoneAuthCredential credential) async {
-          try {
-            await auth.signInWithCredential(credential);
-            _showSnackBar(context, "Phone number automatically verified", Colors.green);
-          } catch (e) {
-            print("Error during automatic sign-in: $e");
-            _showSnackBar(context, "Auto sign-in failed: $e", Colors.red);
-          }
-        },
+  try {
+    await auth.verifyPhoneNumber(
+      phoneNumber: phoneNumber,
+      verificationCompleted: (PhoneAuthCredential credential) async {
+        try {
+          await auth.signInWithCredential(credential);
+          _showSnackBar(context, "Phone number automatically verified", Colors.green);
+        } catch (e, stackTrace) {
+          FirebaseCrashlytics.instance.recordError(
+            e,
+            stackTrace,
+            reason: "Error during automatic sign-in with credential",
+          );
+          _showSnackBar(context, "Auto sign-in failed: $e", Colors.red);
+        }
+      },
 
-        verificationFailed: (FirebaseAuthException e) {
-          // loader.state = false;
-          print("Verification failed: ${e.message}");
+      verificationFailed: (FirebaseAuthException e) {
+        // Record FirebaseAuthException in Crashlytics
+        FirebaseCrashlytics.instance.recordError(
+          e,
+          null,
+          reason: "Phone number verification failed",
+          fatal: false,
+        );
 
-           String errorMsg = 'Verification failed.';
+        print("Verification failed: ${e.message}");
 
-
-           if (e.code == 'invalid-phone-number') {
+        String errorMsg = 'Verification failed.';
+        if (e.code == 'invalid-phone-number') {
           errorMsg = 'The phone number is invalid.';
         } else if (e.message != null) {
           errorMsg = e.message!;
         }
-           _showSnackBar(context, errorMsg, Colors.red);
-        
-        },
-        codeSent: (String verificationId, int? resendToken) {
-          // loader.state = false;
-          print("Verification code sent: $verificationId");
-         // state = PhoneAuthState(verificationId: verificationId);
-         pref.setString("verificationid", verificationId);
-          codeSentNotifier.state = true; // Update the codeSentProvider
+
+        _showSnackBar(context, errorMsg, Colors.red);
+      },
+
+      codeSent: (String verificationId, int? resendToken) {
+        pref.setString("verificationid", verificationId);
+        codeSentNotifier.state = true;
         _showSnackBar(context, "OTP sent successfully", Colors.blue);
-        },
-        codeAutoRetrievalTimeout: (String verificationId) {
-          // loader.state = false;
-          print("Auto-retrieval timeout. Verification ID: $verificationId");
-          _showSnackBar(context, "Auto retrieval timeout. Please enter OTP manually.", Colors.orange);
-        },
-      );
-    } catch (e) {
-      loader.state = false;
-      print("Error during phone verification: $e");
-      _showSnackBar(context, "Error during verification: $e", Colors.red);
-    }
+      },
+
+      codeAutoRetrievalTimeout: (String verificationId) {
+        print("Auto-retrieval timeout. Verification ID: $verificationId");
+        _showSnackBar(context, "Auto retrieval timeout. Please enter OTP manually.", Colors.orange);
+      },
+    );
+  } catch (e, stackTrace) {
+    loader.state = false;
+
+    // Record unexpected error to Crashlytics
+    FirebaseCrashlytics.instance.recordError(
+      e,
+      stackTrace,
+      reason: "Unexpected error during phone number verification",
+      fatal: true,
+    );
+
+    print("Error during phone verification: $e");
+    _showSnackBar(context, "Error during verification: $e", Colors.red);
   }
+}
 
   void _showSnackBar(BuildContext context, String message, Color backgroundColor) {
   ScaffoldMessenger.of(context).showSnackBar(
@@ -276,7 +292,7 @@ if (selectedImage != null) {
 }
 
 
-  Future<void> signInWithPhoneNumber(String smsCode, WidgetRef ref) async {
+  Future<void> signInWithPhoneNumber(String smsCode, WidgetRef ref,BuildContext context) async {
     final authState = ref.watch(firebaseAuthProvider);
     final loadingState = ref.watch(loadingProvider.notifier);
      var pref = await SharedPreferences.getInstance();
@@ -296,15 +312,16 @@ if (selectedImage != null) {
           print("Phone verification successful.");
 
           // Generate a custom UID
-          String customUid =
-              "#${(100000 + DateTime.now().millisecondsSinceEpoch % 900000)}";
-          String? firebaseToken = await value.user?.getIdToken();
-          SharedPreferences prefs = await SharedPreferences.getInstance();
-          await prefs.setString('firebaseToken', firebaseToken!);
+          // String customUid =
+          //     "#${(100000 + DateTime.now().millisecondsSinceEpoch % 900000)}";
+          // String? firebaseToken = await value.user?.getIdToken();
+          // SharedPreferences prefs = await SharedPreferences.getInstance();
+          // await prefs.setString('firebaseToken', firebaseToken!);
 
 
            // Send phone number and role to API
           await sendPhoneNumberAndRoleToAPI(
+            context: context,
             phoneNumber: value.user!.phoneNumber!,
             role: "user", // Assign the role as needed
           );
@@ -328,6 +345,7 @@ if (selectedImage != null) {
 
 
   Future<void> sendPhoneNumberAndRoleToAPI({
+     context,
     required String phoneNumber,
     required String role,
   }) async {
@@ -378,6 +396,7 @@ if (selectedImage != null) {
           print("User Data to Save in SharedPreferences: $userData");
 
          await prefs.setString('userData', userData);
+          Navigator.pushReplacement(context,MaterialPageRoute(builder: (context) => const HomePage()),);
 
       } else {
         print("Failed to send data to the API. Status code: ${response.statusCode}");

@@ -1,2 +1,5 @@
--keep class **.zego.**  { *; }
--keep class **.**.zego_zpns.** { *; }
+# Razorpay SDK keep rules
+-keep class com.razorpay.** { *; }
+-keep class proguard.annotation.** { *; }
+-dontwarn com.razorpay.**
+-dontwarn proguard.annotation.**

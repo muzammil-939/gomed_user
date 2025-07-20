@@ -1,4 +1,4 @@
-package com.gmd_user
+package com.thozhilvaniga.kiitmgomedserv
 
 import io.flutter.embedding.android.FlutterActivity
 

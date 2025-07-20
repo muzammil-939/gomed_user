@@ -5,7 +5,6 @@ import 'package:http/http.dart' as http;
 import 'package:http/retry.dart';
 import 'package:gomed_user/model/product.dart'; // Import your model file
 import 'package:gomed_user/utils/gomed_api.dart'; // Import Bbapi class
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:gomed_user/providers/auth_state.dart';
 
 

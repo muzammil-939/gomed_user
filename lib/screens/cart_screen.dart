@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import 'package:gomed_user/main.dart';
-import 'package:gomed_user/providers/addbooking_provider.dart';
-
 import 'package:gomed_user/providers/auth_state.dart';
 import 'package:gomed_user/providers/getproduct_provider.dart';
 import 'package:gomed_user/screens/razorpay_payment_page.dart';
@@ -12,7 +9,7 @@ import 'package:gomed_user/providers/products.dart';
 import 'package:gomed_user/model/product.dart';
 import "package:gomed_user/screens/products_screen.dart";
 import 'package:geocoding/geocoding.dart';
-import 'package:google_places_flutter/google_places_flutter.dart';
+import 'package:gomed_user/screens/address_edit_screen.dart';
 
 class CartScreen extends ConsumerStatefulWidget {
   const CartScreen({super.key});
@@ -20,22 +17,23 @@ class CartScreen extends ConsumerStatefulWidget {
   @override
   ConsumerState<CartScreen> createState() => CartScreenState();
 }
+
 enum PaymentMethod { cod, online }
+
 class CartScreenState extends ConsumerState<CartScreen> {
   List<String> cartItemKeys = []; // Now stores composite keys
   List<Data> cartProducts = [];
   List<String> selectedCartItemKeys = []; // Track selected cart items by composite key
   Map<String, int> productQuantities = {}; // Key: composite key, Value: quantity
   Map<String, bool> productSelections = {}; // Key: composite key, Value: selection state
-  TextEditingController locationSearchController = TextEditingController();
   PaymentMethod selectedMethod = PaymentMethod.online;
   String? add1;
   String? add2;
   double? latitude;
   double? longitude;
   String? userid;
-  double?totalAmount;
-  double?codAdvance;
+  double? totalAmount;
+  double? codAdvance;
   String locationAddress = "Fetching location...";
 
   String bookingOtp = generatebookingOtp();
@@ -45,31 +43,23 @@ class CartScreenState extends ConsumerState<CartScreen> {
     super.initState();
     _loadCartItems();
     _loadAddress();
-    locationSearchController.addListener(() {
-    if (locationSearchController.text.isEmpty) {
-      setState(() {
-        latitude = null;
-        longitude = null;
-        locationAddress = "Location not selected";
-      });
-    }
-  });
-
   }
 
   Future<void> _loadAddress() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-
+        
     // Fetch user data from API provider
     var userState = ref.watch(userProvider);
-
-    if (userState != null) {
+    
+    if (userState.data != null && userState.data!.isNotEmpty) {
       final user = userState.data![0].user;
       setState(() {
         userid = userState.data![0].user!.sId;
         add1 = user!.address ?? prefs.getString('add1') ?? "No Address";
-        latitude = double.tryParse(user.location?.latitude ?? "0.0");
-        longitude = double.tryParse(user.location?.longitude ?? "0.0");
+        latitude = double.tryParse(user.location?.latitude ?? "0.0") ?? 
+                  double.tryParse(prefs.getString('latitude') ?? "0.0");
+        longitude = double.tryParse(user.location?.longitude ?? "0.0") ?? 
+                   double.tryParse(prefs.getString('longitude') ?? "0.0");
       });
       print('details.....$add1,$latitude,$longitude,$userid');
 
@@ -79,7 +69,13 @@ class CartScreenState extends ConsumerState<CartScreen> {
     } else {
       setState(() {
         add1 = prefs.getString('add1') ?? "No Address";
+        latitude = double.tryParse(prefs.getString('latitude') ?? "0.0");
+        longitude = double.tryParse(prefs.getString('longitude') ?? "0.0");
       });
+      
+      if (latitude != null && longitude != null) {
+        _getAddressFromCoordinates(latitude!, longitude!);
+      }
     }
   }
 
@@ -100,49 +96,40 @@ class CartScreenState extends ConsumerState<CartScreen> {
     }
   }
 
-  Future<void> _changeAddress(BuildContext context) async {
-    TextEditingController add1Controller = TextEditingController(text: add1);
-    TextEditingController add2Controller = TextEditingController(text: add2);
-
-    await showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text("Change Address"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: add1Controller,
-                decoration: InputDecoration(labelText: "Address Line 1"),
-              ),
-              SizedBox(height: 10),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text("Close"),
-            ),
-            TextButton(
-              onPressed: () async {
-                SharedPreferences prefs = await SharedPreferences.getInstance();
-                await prefs.setString('add1', add1Controller.text.trim());
-                await prefs.setString('add2', add2Controller.text.trim());
-
-                setState(() {
-                  add1 = add1Controller.text.trim();
-                  add2 = add2Controller.text.trim();
-                });
-
-                Navigator.pop(context);
-              },
-              child: Text("Save"),
-            ),
-          ],
-        );
-      },
+  Future<void> _navigateToAddressEdit() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AddressEditScreen(
+          currentAddress: add1,
+          currentLatitude: latitude,
+          currentLongitude: longitude,
+          currentLocationAddress: locationAddress,
+        ),
+      ),
     );
+
+    // Check if any changes were made
+    if (result != null && result is Map<String, dynamic>) {
+      bool hasChanges = result['hasChanges'] ?? false;
+      
+      if (hasChanges) {
+        setState(() {
+          add1 = result['address'];
+          latitude = result['latitude'];
+          longitude = result['longitude'];
+          locationAddress = result['locationAddress'];
+        });
+        
+        // Show confirmation
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Address and location updated successfully!"),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    }
   }
 
   // UPDATED: Load cart items with composite key support
@@ -162,18 +149,21 @@ class CartScreenState extends ConsumerState<CartScreen> {
           String productId = parts[0];
           String distributorId = parts[1];
           
-          // Find the specific product-distributor combination
-          Data? matchingProduct = productState.data!.firstWhere(
-            (product) => product.productId == productId && product.distributorId == distributorId,
-            orElse: () => Data.initial(),
-          );
-          
-          if (matchingProduct != null) {
+           // Find the specific product-distributor combination
+          try {
+            Data matchingProduct = productState.data!.firstWhere(
+              (product) => product.productId == productId && product.distributorId == distributorId,
+            );
+            
+            // FIXED: Remove null check - firstWhere will throw if not found
             cartProducts.add(matchingProduct);
             
             // Initialize selection and quantity using composite key
             productSelections[cartItemKey] = prefs.getBool('selected_$cartItemKey') ?? true;
             productQuantities[cartItemKey] = prefs.getInt('quantity_$cartItemKey') ?? 1;
+          } catch (e) {
+            // Handle case where product is not found
+            print('Product not found for key: $cartItemKey');
           }
         }
       }
@@ -224,20 +214,24 @@ class CartScreenState extends ConsumerState<CartScreen> {
     });
   }
 
-  Future<void> _proceedToBuy({ required double totalAmount,
-    required double codAdvance}) async {
-   
+  Future<void> _proceedToBuy({
+    required double totalAmount,
+    required double codAdvance,
+  }) async {
     try {
       List<Data> selectedProducts = [];
       
       // Get selected products using composite keys
       for (String cartItemKey in selectedCartItemKeys) {
-        Data? product = cartProducts.firstWhere(
-          (p) => "${p.productId}_${p.distributorId}" == cartItemKey,
-          orElse: () => Data.initial(),
-        );
-        if (product != null) {
+        try {
+          Data product = cartProducts.firstWhere(
+            (p) => "${p.productId}_${p.distributorId}" == cartItemKey,
+          );
+          
+          // FIXED: Remove null check - firstWhere will throw if not found
           selectedProducts.add(product);
+        } catch (e) {
+          print('Product not found for cart item key: $cartItemKey');
         }
       }
 
@@ -271,16 +265,14 @@ class CartScreenState extends ConsumerState<CartScreen> {
         String cartItemKey = "${product.productId}_${product.distributorId}";
         int quantity = productQuantities[cartItemKey] ?? 1;
         String distributorid = product.distributorId!;
-         double userPrice = product.price! + (product.price! * 0.10); // 10% markup
+        double userPrice = product.price! + (product.price! * 0.10); // 10% markup
 
         return {
           "productId": product.productId!,
           "distributorId": distributorid,
           "quantity": quantity,
-          "bookingStatus": "pending",     // ✅ Required
+          "bookingStatus": "pending", // ✅ Required
           "userPrice": double.parse(userPrice.toStringAsFixed(2)) // Optional: precision
-         
-
         };
       }).toList();
 
@@ -300,12 +292,11 @@ class CartScreenState extends ConsumerState<CartScreen> {
       print("🏠 Address: $add1");
       print("✅ Products Booked: $bookedCount");
       print("✅ booking otp: $bookingOtp");
-      print("✅ Products Booked: $selectedMethod");
-      print("✅ Products Booked: $codAdvance");
-      print("✅ Products Booked: $totalAmount");
+      print("✅ Payment Method: $selectedMethod");
+      print("✅ COD Advance: $codAdvance");
+      print("✅ Total Amount: $totalAmount");
 
-      String paymentMethodString = selectedMethod == PaymentMethod.cod? "cod"
-    : "onlinepayment";
+      String paymentMethodString = selectedMethod == PaymentMethod.cod ? "cod" : "onlinepayment";
 
       await ref.read(getproductProvider.notifier).createBooking(
         userId: userid,
@@ -313,10 +304,9 @@ class CartScreenState extends ConsumerState<CartScreen> {
         location: location,
         address: add1,
         bookingOtp: bookingOtp,
-        paymentmethod:paymentMethodString,
-        codAdvance:paymentMethodString == "cod" ? codAdvance :totalAmount,
-        totalPrice:totalAmount,
-
+        paymentmethod: paymentMethodString,
+        codAdvance: paymentMethodString == "cod" ? codAdvance : totalAmount,
+        totalPrice: totalAmount,
       );
 
       print("✅ Booking successful!");
@@ -339,7 +329,8 @@ class CartScreenState extends ConsumerState<CartScreen> {
       if (cartItemKeys.isEmpty) {
         Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (_) => ProductsScreen(selectedCategory: 'ALL')));
+            MaterialPageRoute(
+                builder: (_) => ProductsScreen(selectedCategory: 'ALL')));
       } else {
         setState(() {});
       }
@@ -350,40 +341,24 @@ class CartScreenState extends ConsumerState<CartScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // double totalMRP = 0;
-     double totalBase = 0;
+    double totalBase = 0;
     int totalSelectedBookingCount = 0;
 
-    
     // Calculate total using composite keys
     for (Data product in cartProducts) {
       String cartItemKey = "${product.productId}_${product.distributorId}";
       if (productSelections[cartItemKey] == true) {
         int quantity = productQuantities[cartItemKey] ?? 1;
-        // totalMRP += (product.price ?? 0) * quantity;
         totalBase += (product.price ?? 0) * quantity;
         totalSelectedBookingCount++;
       }
     }
-
-    // double platformFee = totalMRP * 0.025; // 2.5% fee
-    // double totalAmount = double.parse(((totalMRP * 1.10) + platformFee).toStringAsFixed(2));
 
     double totalAdded = totalBase * 0.10; // 10% of base
     double userPrice = totalBase + totalAdded;
     double platformFee = userPrice * 0.025; // 2.5% of userPrice
     double totalAmount = userPrice + platformFee;
     double codAdvance = totalAdded + platformFee;
-    print("10% of original price:$totalAdded");
-    print("userPrice:$userPrice");
-    print("platformfee:$platformFee");
-    print("totalAmount:$totalAmount");
-    print("paidPrice:$codAdvance");
-    print("original price:$totalBase");
-    print("paymenttype:$selectedMethod");
-
-   
-    
 
     return Scaffold(
       resizeToAvoidBottomInset: true,
@@ -395,320 +370,328 @@ class CartScreenState extends ConsumerState<CartScreen> {
         child: SingleChildScrollView(
           child: cartProducts.isEmpty
               ? const Center(
-            child: Text(
-              "Your cart is empty!",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-          )
+                  child: Text(
+                    "Your cart is empty!",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                )
               : Column(
-            children: [
-              // Address Section
-              Padding(
-                padding: EdgeInsets.all(10),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Expanded(
-                      child: RichText(
-                        overflow: TextOverflow.ellipsis,
-                        text: TextSpan(
-                          style: TextStyle(fontSize: 16, color: Colors.black54),
+                    // Address Section - Updated to use new screen
+                    Card(
+                      margin: const EdgeInsets.all(10),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            TextSpan(text: "Deliver To: "),
-                            TextSpan(
-                              text: add1 != null && add1!.isNotEmpty ? add1! : "No Address",
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black87,
-                              ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  "Delivery Details",
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                TextButton.icon(
+                                  onPressed: _navigateToAddressEdit,
+                                  icon: const Icon(Icons.edit, size: 18),
+                                  label: const Text("Change"),
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: Colors.blue,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            
+                            // Address Display
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Icon(Icons.home, size: 20, color: Colors.grey),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        "Address:",
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.black87,
+                                        ),
+                                      ),
+                                      Text(
+                                        add1 != null && add1!.isNotEmpty 
+                                            ? add1! 
+                                            : "No Address",
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.black54,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            
+                            const SizedBox(height: 12),
+                            
+                            // Location Display
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Icon(Icons.location_on, size: 20, color: Colors.grey),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        "Location:",
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.black87,
+                                        ),
+                                      ),
+                                      Text(
+                                        locationAddress,
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.black54,
+                                        ),
+                                      ),
+                                      if (latitude != null && longitude != null)
+                                        Text(
+                                          "Coordinates: ${latitude!.toStringAsFixed(4)}, ${longitude!.toStringAsFixed(4)}",
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            
+                            const SizedBox(height: 5),
+
+                            // 🔁 Reset Button Row (Right-Aligned)
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                TextButton.icon(
+                                  onPressed: () {
+
+                                    _loadAddress();
+                                    // // ✅ Call your reset logic here
+                                    // setState(() {
+                                    //   add1 = "";
+                                    //   locationAddress = "";
+                                    //   latitude = null;
+                                    //   longitude = null;
+                                    // });
+                                  },
+                                  icon: const Icon(Icons.refresh, size: 18),
+                                  label: const Text("Reset"),
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: Colors.red,
+                                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
                       ),
                     ),
-                    TextButton(
-                      onPressed: () => _changeAddress(context),
-                      child: const Text("Change", style: TextStyle(color: Colors.blue)),
-                    ),
-                  ],
-                ),
-              ),
 
-              // Location search section
-              Padding(
-                padding: const EdgeInsets.all(8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      "Search Location:",
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 10),
-                    GooglePlaceAutoCompleteTextField(
-                      textEditingController: locationSearchController,
-                      googleAPIKey: "AIzaSyCMADwyS3eoxJ5dQ_iFiWcDBA_tJwoZosw",
-                      inputDecoration: InputDecoration(
-                        hintText: "Search for location",
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
+                    // Cart items list
+                    SizedBox(
+                      height: MediaQuery.of(context).size.height * 0.3,
+                      child: SingleChildScrollView(
+                        child: Column(
+                          children: cartProducts.map((product) => _buildCartItem(product)).toList(),
                         ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 15),
                       ),
-                      debounceTime: 800,
-                      isLatLngRequired: true,
-                      getPlaceDetailWithLatLng: (prediction) {
-                        double lat = double.parse(prediction.lat!);
-                        double lng = double.parse(prediction.lng!);
-                        setState(() {
-                          latitude = lat;
-                          longitude = lng;
-                        });
-                        _getAddressFromCoordinates(lat, lng);
-                      },
-                      itemClick: (prediction) {
-                        FocusScope.of(context).unfocus();
-                        locationSearchController.text = prediction.description!;
-                        locationSearchController.selection = TextSelection.fromPosition(
-                          TextPosition(offset: prediction.description!.length),
-                        );
-                      },
                     ),
-                    const SizedBox(height: 10),
-                    const Text(
-                      "Your Location:",
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+
+                    // Price details
+                    PriceDetails(
+                      totalMRP: userPrice,
+                      platformFee: platformFee,
+                      totalAmount: totalAmount,
                     ),
-                    const SizedBox(height: 10),
-                    Text(
-                      locationAddress,
-                      style: const TextStyle(fontSize: 14, color: Colors.black87),
-                    ),
-                  ],
-                ),
-              ),
-              // Padding(
-              //   padding: const EdgeInsets.all(8),
-              //   child: Column(
-              //     crossAxisAlignment: CrossAxisAlignment.start,
-              //     children: [
-              //       const Text(
-              //         "Search Location:",
-              //         style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              //       ),
-              //       const SizedBox(height: 10),
-              //       GooglePlaceAutoCompleteTextField(
-              //         textEditingController: locationSearchController,
-              //         googleAPIKey: "AIzaSyCMADwyS3eoxJ5dQ_iFiWcDBA_tJwoZosw",
-              //         inputDecoration: InputDecoration(
-              //           hintText: "Search for location",
-              //           border: OutlineInputBorder(
-              //             borderRadius: BorderRadius.circular(10),
-              //           ),
-              //           contentPadding: const EdgeInsets.symmetric(horizontal: 15),
-              //           suffixIcon: locationSearchController.text.isNotEmpty
-              //               ? IconButton(
-              //                   icon: const Icon(Icons.clear),
-              //                   onPressed: () {
-              //                     setState(() {
-              //                       locationSearchController.clear();
-              //                       latitude = null;
-              //                       longitude = null;
-              //                       locationAddress = "Location not selected";
-              //                     });
-              //                   },
-              //                 )
-              //               : null,
-              //         ),
-              //         debounceTime: 800,
-              //         isLatLngRequired: true,
-                      
-              //         // Enable manual text editing
-              //         countries: const [], // Allow all countries
-              //         // textCapitalization: TextCapitalization.words,
-                      
-              //         // // This is crucial for manual editing
-              //         // textChanged: (value) {
-              //         //   // Allow manual text changes and clear location data if text is empty
-              //         //   if (value.isEmpty) {
-              //         //     setState(() {
-              //         //       latitude = null;
-              //         //       longitude = null;
-              //         //       locationAddress = "Location not selected";
-              //         //     });
-              //         //   }
-              //         // },
-                      
-              //         getPlaceDetailWithLatLng: (prediction) {
-              //           double lat = double.parse(prediction.lat!);
-              //           double lng = double.parse(prediction.lng!);
-              //           setState(() {
-              //             latitude = lat;
-              //             longitude = lng;
-              //           });
-              //           _getAddressFromCoordinates(lat, lng);
-              //         },
-                      
-              //         itemClick: (prediction) {
-              //           FocusScope.of(context).unfocus();
-              //           setState(() {
-              //             locationSearchController.text = prediction.description!;
-              //             locationSearchController.selection = TextSelection.fromPosition(
-              //               TextPosition(offset: prediction.description!.length),
-              //             );
-              //           });
-              //         },
-                      
-              //         // Custom item builder for better UI
-              //         itemBuilder: (context, index, prediction) {
-              //           return Container(
-              //             padding: const EdgeInsets.all(10),
-              //             child: Row(
-              //               children: [
-              //                 const Icon(Icons.location_on, color: Colors.grey, size: 20),
-              //                 const SizedBox(width: 10),
-              //                 Expanded(
-              //                   child: Text(
-              //                     prediction.description ?? "",
-              //                     style: const TextStyle(fontSize: 14),
-              //                     overflow: TextOverflow.ellipsis,
-              //                   ),
-              //                 ),
-              //               ],
-              //             ),
-              //           );
-              //         },
-                      
-              //         // Add separator between items
-              //         seperatedBuilder: const Divider(height: 1),
-                      
-              //         // Container styling for suggestions
-              //         containerHorizontalPadding: 0,
-                      
-              //         // Focus handling
-              //         focusNode: FocusNode(),
-              //       ),
-              //       const SizedBox(height: 10),
-              //       const Text(
-              //         "Your Location:",
-              //         style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              //       ),
-              //       const SizedBox(height: 10),
-              //       Text(
-              //         locationAddress,
-              //         style: const TextStyle(fontSize: 14, color: Colors.black87),
-              //       ),
-              //     ],
-              //   ),
-              // ),
-
-              // Cart items list
-              SizedBox(
-                height: MediaQuery.of(context).size.height * 0.4,
-                child: SingleChildScrollView(
-                  child: Column(
-                    children: cartProducts.map((product) => _buildCartItem(product)).toList(),
-                  ),
-                ),
-              ),
-
-              // Price details
-              PriceDetails(
-                totalMRP: userPrice,
-                platformFee: platformFee,
-                totalAmount: totalAmount,
-              ),
-              const SizedBox(height: 20),
-                      const Text("Select Payment Method"),
-                      Row(
-                        children: [
-                          Radio<PaymentMethod>(
-                            value: PaymentMethod.cod,
-                            groupValue: selectedMethod,
-                            onChanged: (value) {
-                              if (value != null) {
-                                setState(() {
-                                  selectedMethod = value;
-                                });
-                              }
-                            },
-                          ),
-                          const Text("Cash on Delivery"),
-                          Radio<PaymentMethod>(
-                            value: PaymentMethod.online,
-                            groupValue: selectedMethod,
-                            onChanged: (value) {
-                              if (value != null) {
-                                setState(() {
-                                  selectedMethod = value;
-                                });
-                              }
-                            },
-                          ),
-                          const Text("Online Payment"),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        selectedMethod == PaymentMethod.online
-                            ? "Full Amount to Pay: ₹${totalAmount.toStringAsFixed(2)}"
-                            : "Advance to Pay: ₹${codAdvance.toStringAsFixed(2)}",
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-              // Selected products count
-              Padding(
-                padding: const EdgeInsets.all(10),
-                child: Text(
-                  " $totalSelectedBookingCount Selected Products for Booking",
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black),
-                ),
-              ),
-
-              // Warning if no products selected
-              if (selectedCartItemKeys.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: Text(
-                    "Select at least one product to continue",
-                    style: TextStyle(color: Colors.red, fontSize: 14),
-                  ),
-                ),
-
-              // Continue button
-              Padding(
-                padding: const EdgeInsets.all(10),
-                child: ElevatedButton(
-                  onPressed: selectedCartItemKeys.isNotEmpty
-                      ? () {
-                    double payAmount = selectedMethod == PaymentMethod.online
-                                    ? totalAmount
-                                    : codAdvance;    
-                    print("Razorpay Amount:$payAmount");                
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => RazorpayPaymentPage(
-                          amount: payAmount,
-                          onSuccess: () => _proceedToBuy(
-                                totalAmount: totalAmount,
-                                codAdvance: codAdvance,
+                    
+                    const SizedBox(height: 20),
+                    
+                    // Payment Method Selection
+                    Card(
+                      margin: const EdgeInsets.symmetric(horizontal: 10),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              "Select Payment Method",
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
                               ),
-                          email: '',
-                          contact: '',
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: RadioListTile<PaymentMethod>(
+                                    value: PaymentMethod.cod,
+                                    groupValue: selectedMethod,
+                                    onChanged: (value) {
+                                      if (value != null) {
+                                        setState(() {
+                                          selectedMethod = value;
+                                        });
+                                      }
+                                    },
+                                    title: const Text("Cash on Delivery"),
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
+                                ),
+                                Expanded(
+                                  child: RadioListTile<PaymentMethod>(
+                                    value: PaymentMethod.online,
+                                    groupValue: selectedMethod,
+                                    onChanged: (value) {
+                                      if (value != null) {
+                                        setState(() {
+                                          selectedMethod = value;
+                                        });
+                                      }
+                                    },
+                                    title: const Text("Online Payment"),
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                           Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: selectedMethod == PaymentMethod.online 
+                                      ? Colors.blue[50] 
+                                      : Colors.orange[50],
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: selectedMethod == PaymentMethod.online 
+                                        ? Colors.blue[200]! 
+                                        : Colors.orange[200]!,
+                                  ),
+                                ),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start, // prevent overflow
+                                  children: [
+                                    Icon(
+                                      selectedMethod == PaymentMethod.online 
+                                          ? Icons.payment 
+                                          : Icons.money,
+                                      color: selectedMethod == PaymentMethod.online 
+                                          ? Colors.blue 
+                                          : Colors.orange,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded( // 👈 prevents overflow
+                                      child: Text(
+                                        selectedMethod == PaymentMethod.online
+                                            ? "Full Amount to Pay: ₹${totalAmount.toStringAsFixed(2)}"
+                                            : "Advance to Pay: ₹${codAdvance.toStringAsFixed(2)}",
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                          ],
                         ),
                       ),
-                    );
-                  }
-                      : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    minimumSize: const Size(double.infinity, 50),
-                  ),
-                  child: const Text("Continue", style: TextStyle(fontSize: 16, color: Colors.white)),
+                    ),
+
+                    // Selected products count
+                    Padding(
+                      padding: const EdgeInsets.all(10),
+                      child: Text(
+                        "$totalSelectedBookingCount Selected Products for Booking",
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
+                    ),
+
+                    // Warning if no products selected
+                    if (selectedCartItemKeys.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.only(bottom: 10),
+                        child: Text(
+                          "Select at least one product to continue",
+                          style: TextStyle(color: Colors.red, fontSize: 14),
+                        ),
+                      ),
+
+                    // Continue button
+                    Padding(
+                      padding: const EdgeInsets.all(10),
+                      child: ElevatedButton(
+                        onPressed: selectedCartItemKeys.isNotEmpty
+                            ? () {
+                                double payAmount = selectedMethod == PaymentMethod.online
+                                    ? totalAmount
+                                    : codAdvance;
+                                print("Razorpay Amount:$payAmount");
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => RazorpayPaymentPage(
+                                      amount: payAmount,
+                                      onSuccess: () => _proceedToBuy(
+                                        totalAmount: totalAmount,
+                                        codAdvance: codAdvance,
+                                      ),
+                                      email: '',
+                                      contact: '',
+                                    ),
+                                  ),
+                                );
+                              }
+                            : null,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue,
+                          minimumSize: const Size(double.infinity, 50),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: const Text(
+                          "Continue",
+                          style: TextStyle(fontSize: 16, color: Colors.white),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
-          ),
         ),
       ),
     );
@@ -745,8 +728,8 @@ class CartScreenState extends ConsumerState<CartScreen> {
                   decoration: BoxDecoration(
                     image: product.productImages != null
                         ? DecorationImage(
-                        image: NetworkImage("${product.productImages?.first}"),
-                        fit: BoxFit.cover)
+                            image: NetworkImage("${product.productImages?.first}"),
+                            fit: BoxFit.cover)
                         : null,
                     color: Colors.grey[300],
                     borderRadius: BorderRadius.circular(10),
@@ -763,9 +746,9 @@ class CartScreenState extends ConsumerState<CartScreen> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(color: Colors.grey)),
-                    Text("AvlQty:${product.quantity}",
-                              style: const TextStyle(
-                                  fontSize: 14, color: Colors.grey)),
+                      Text("AvlQty:${product.quantity}",
+                          style: const TextStyle(
+                              fontSize: 14, color: Colors.grey)),
                       Row(
                         children: [
                           const Text("Qty: ",
@@ -784,17 +767,17 @@ class CartScreenState extends ConsumerState<CartScreen> {
                             icon: const Icon(Icons.add_circle_outline, color: Colors.green),
                             onPressed: quantity < maxLimit
                                 ? () {
-                              _saveQuantity(cartItemKey, quantity + 1);
-                            }
+                                    _saveQuantity(cartItemKey, quantity + 1);
+                                  }
                                 : () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    "Only $maxLimit available for this product.",
-                                  ),
-                                ),
-                              );
-                            },
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          "Only $maxLimit available for this product.",
+                                        ),
+                                      ),
+                                    );
+                                  },
                           ),
                         ],
                       ),
@@ -805,7 +788,6 @@ class CartScreenState extends ConsumerState<CartScreen> {
                             style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(width: 5),
-                          
                         ],
                       ),
                     ],
@@ -853,12 +835,12 @@ class CartScreenState extends ConsumerState<CartScreen> {
     await prefs.remove('quantity_$cartItemKey');
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text(
+      const SnackBar(
+        content: Text(
           "Item removed from cart",
           style: TextStyle(color: Colors.white),
         ),
-        duration: const Duration(seconds: 2),
+        duration: Duration(seconds: 2),
         backgroundColor: Colors.red,
       ),
     );
@@ -872,7 +854,12 @@ class PriceDetails extends StatelessWidget {
   final double totalAmount;
   final double platformFee;
 
-  const PriceDetails({required this.totalMRP, required this.totalAmount, required this.platformFee});
+  const PriceDetails({
+    Key? key,
+    required this.totalMRP,
+    required this.totalAmount,
+    required this.platformFee,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -884,6 +871,7 @@ class PriceDetails extends StatelessWidget {
           children: [
             _buildRow("Total MRP:", "₹${totalMRP.toStringAsFixed(2)}"),
             _buildRow("Platform Fee (2.5%):", "+₹${platformFee.toStringAsFixed(2)}"),
+            const Divider(),
             _buildRow("Total Amount:", "₹${totalAmount.toStringAsFixed(2)}", isBold: true),
           ],
         ),
@@ -904,3 +892,5 @@ class PriceDetails extends StatelessWidget {
     );
   }
 }
+
+

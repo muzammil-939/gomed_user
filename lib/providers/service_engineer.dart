@@ -5,9 +5,8 @@ import 'package:gomed_user/providers/auth_state.dart';
 import 'package:gomed_user/providers/loader.dart';
 import 'package:gomed_user/utils/gomed_api.dart';
 import 'package:http/http.dart' as http;
-import 'package:http/retry.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import "package:flutter/material.dart";
+
 
 class ServiceEngineerNotifier extends StateNotifier<ServiceEngineerModel> {
   final Ref ref;
@@ -51,7 +50,7 @@ class ServiceEngineerNotifier extends StateNotifier<ServiceEngineerModel> {
         String? newAccessToken =
             await ref.read(userProvider.notifier).restoreAccessToken();
 
-        if (newAccessToken!.isNotEmpty) {
+        if (newAccessToken.isNotEmpty) {
           userData['accessToken'] = newAccessToken;
           pref.setString('userData', jsonEncode(userData));
 
